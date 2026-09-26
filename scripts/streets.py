@@ -61,6 +61,9 @@ TYPOS = {
     "WILLSITON": "WILLISTON", "WILISTON": "WILLISTON", "WILLISTION": "WILLISTON",
     "NEWBERYRD": "NEWBERRY RD", "NEWBERY": "NEWBERRY", "RD0": "RD",
     "EUNIVERSITY": "E UNIVERSITY", "WUNIVERSITY": "W UNIVERSITY", "2NSD": "2ND",
+    # OSM spells some out: "Southwest Second Avenue"
+    "FIRST": "1ST", "SECOND": "2ND", "THIRD": "3RD", "FOURTH": "4TH", "FIFTH": "5TH",
+    "SIXTH": "6TH", "SEVENTH": "7TH", "EIGHTH": "8TH", "NINTH": "9TH", "TENTH": "10TH",
 }
 
 # Main roads often written without a suffix ("SW ARCHER", "W UNIVERSITY").
