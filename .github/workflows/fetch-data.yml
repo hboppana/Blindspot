@@ -1,0 +1,43 @@
+name: Fetch crash data
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/fetch_data.py
+      - .github/workflows/fetch-data.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download dataGNV and FDOT crashes
+        run: python scripts/fetch_data.py
+
+      - name: Summarize
+        run: |
+          wc -l data/raw/*.csv
+          ls -lh data/raw/
+
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/raw
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "Update crash data"
+            git push
+          fi
