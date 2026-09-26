@@ -71,3 +71,18 @@ export const titleCase = (name: string) =>
 /** "2026-07-23" -> "July 2026" */
 export const monthYear = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+/** Fix-list entries grouped by recommended fix, biggest crashes-a-year first. */
+export function groupByFix(fixes: { recommended_fix: string; crashes_per_year: number }[]) {
+  const groups = new Map<string, { count: number; perYear: number }>();
+  for (const f of fixes) {
+    const key = f.recommended_fix.startsWith("review needed")
+      ? "No single FHWA fix fits yet"
+      : f.recommended_fix;
+    const g = groups.get(key) ?? { count: 0, perYear: 0 };
+    groups.set(key, { count: g.count + 1, perYear: g.perYear + f.crashes_per_year });
+  }
+  return [...groups.entries()]
+    .map(([fix, g]) => ({ fix, ...g }))
+    .sort((a, b) => b.perYear - a.perYear);
+}

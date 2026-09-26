@@ -32,7 +32,7 @@ export function CaseImagery({
     <APIProvider apiKey={apiKey}>
       <div className="grid gap-4 md:grid-cols-2">
         <figure>
-          <div className="aspect-[8/5] overflow-hidden rounded-lg">
+          <div className="aspect-[8/5] overflow-hidden rounded-md">
             <Map
               defaultCenter={center}
               defaultZoom={20}
@@ -111,7 +111,7 @@ function StreetView({
         ref={ref}
         role="img"
         aria-label={`Street View of ${name}`}
-        className="flex aspect-[8/5] items-center justify-center overflow-hidden rounded-lg bg-black/5 text-sm dark:bg-white/5"
+        className="flex aspect-[8/5] items-center justify-center overflow-hidden rounded-md bg-black/5 text-sm dark:bg-white/5"
       >
         {state.status === "loading" && <span className="opacity-60">Loading Street View…</span>}
         {state.status === "none" && (

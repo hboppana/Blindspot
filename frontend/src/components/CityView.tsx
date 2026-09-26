@@ -164,7 +164,7 @@ export function CityView({
                   className="flex w-full gap-3 px-4 py-2.5 text-left hover:bg-brand-soft"
                 >
                   <span className="w-10 font-bold tabular-nums">
-                    {i.screening_rank ? `#${i.screening_rank}` : "–"}
+                    {i.screening_rank ? `#${i.screening_rank}` : "-"}
                   </span>
                   <span className="flex-1">
                     <span className="block font-semibold">{displayName(i.name)}</span>
@@ -193,7 +193,7 @@ export function CityView({
                 {selected && (
                   <Link
                     href={`/intersections/${i.id}`}
-                    className="mb-2 ml-17 inline-block rounded-md bg-brand px-3 py-1 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-hover"
+                    className="mb-2 ml-17 inline-block rounded-md bg-brand px-3 py-1 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-hover active:translate-y-px"
                   >
                     Open case file
                   </Link>

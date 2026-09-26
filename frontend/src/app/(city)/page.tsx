@@ -1,20 +1,21 @@
-import { getCitySummary, getIntersections, getTrend } from "@/lib/api";
+import { getCitySummary, getFixList, getIntersections, getTrend } from "@/lib/api";
 import { monthYear, num } from "@/lib/format";
 import { CityView } from "@/components/CityView";
 import { FigureStrip } from "@/components/FigureStrip";
-import { CityTrend } from "@/components/Charts";
+import { CityInsights } from "@/components/CityInsights";
 
 export default async function CityPage() {
-  const [city, intersections, trend] = await Promise.all([
+  const [city, intersections, trend, fixes] = await Promise.all([
     getCitySummary(),
     getIntersections(),
     getTrend(),
+    getFixList(),
   ]);
   const s = city.summary;
-  const first = trend[0]?.month;
-  const last = trend.at(-1)?.month;
 
   return (
+    <>
+    {/* The first screen is the map and ranked list; more city data follows below. */}
     <div className="flex flex-col md:h-[calc(100vh-54px)]">
       <section className="px-4 pt-4 pb-3 sm:px-6">
         <FigureStrip
@@ -45,26 +46,20 @@ export default async function CityPage() {
         />
       </section>
 
-      <details className="group px-4 pb-3 sm:px-6">
-        <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-          <svg aria-hidden viewBox="0 0 16 16" className="h-3.5 w-3.5 transition-transform group-open:rotate-90">
-            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          <span className="road-link">
-            <span className="group-open:hidden">Show</span>
-            <span className="hidden group-open:inline">Hide</span> citywide crashes per month,{" "}
-            {first && monthYear(`${first}-01`)} to {last && monthYear(`${last}-01`)}
-          </span>
-        </summary>
-        <div className="mt-2 rounded-md border border-line bg-surface p-4">
-          <CityTrend months={trend} />
-        </div>
-      </details>
 
       <CityView
         intersections={intersections}
         apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY}
       />
     </div>
+
+    <CityInsights
+      summary={s}
+      auditReport={city.audit_report}
+      trend={trend}
+      intersections={intersections}
+      fixes={fixes}
+    />
+    </>
   );
 }

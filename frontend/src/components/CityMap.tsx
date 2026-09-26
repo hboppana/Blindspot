@@ -40,7 +40,7 @@ export function CityMap({
       <Map
         defaultCenter={GAINESVILLE}
         defaultZoom={12}
-        gestureHandling="greedy"
+        gestureHandling="cooperative"
         disableDefaultUI
         zoomControl
         clickableIcons={false}
@@ -66,7 +66,7 @@ function WholeCityButton() {
           map?.panTo(GAINESVILLE);
           map?.setZoom(12);
         }}
-        className="m-2.5 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white shadow transition-colors hover:bg-brand-hover"
+        className="m-2.5 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white shadow transition-colors hover:bg-brand-hover active:translate-y-px"
       >
         Whole city
       </button>

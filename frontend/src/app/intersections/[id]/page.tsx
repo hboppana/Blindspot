@@ -56,7 +56,7 @@ export default async function CaseFilePage(
               <a
                 href={`/intersections/${x.id}/report`}
                 target="_blank"
-                className="rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+                className="rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover active:translate-y-px"
               >
                 Download report (PDF)
               </a>
