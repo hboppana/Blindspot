@@ -28,10 +28,12 @@ import csv
 import json
 import math
 import os
+import random
 import sys
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -149,18 +151,28 @@ def build_request(folder, meta):
     }
 
 
-def call_gemini(body, model, key, retries=4):
+RETRY_WAITS = (10, 20, 40, 60, 90, 120)  # seconds; 503 "high demand" spells can last minutes
+
+
+def call_gemini(body, model, key):
+    """Response JSON. Retries rate limits and overload; raises RuntimeError when it gives up."""
     req = urllib.request.Request(API.format(model=model), data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json", "x-goog-api-key": key})
-    for attempt in range(retries):
+    for wait in (*RETRY_WAITS, None):
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=300) as resp:
                 return json.loads(resp.read())
         except urllib.error.HTTPError as e:
-            if e.code in (429, 500, 503) and attempt < retries - 1:
-                time.sleep(2 ** attempt * 5)
+            body_text = e.read().decode(errors="replace")
+            # A per-day quota (free tier: 20 requests a day per model) won't clear by retrying.
+            if e.code in (429, 500, 503) and wait is not None and "PerDay" not in body_text:
+                time.sleep(wait + random.uniform(0, 5))
                 continue
-            sys.exit(f"Gemini HTTP {e.code}: {e.read()[:500]!r}")
+            raise RuntimeError(f"Gemini HTTP {e.code}: {body_text[:300]}")
+        except (urllib.error.URLError, TimeoutError) as e:
+            if wait is None:
+                raise RuntimeError(f"Gemini unreachable: {e}")
+            time.sleep(wait)
 
 
 def parse(response, n_legs):
@@ -229,6 +241,7 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="print prompts and token estimate; no API calls")
     ap.add_argument("--only", help="label one corner by id")
     ap.add_argument("--model", default=MODEL)
+    ap.add_argument("--workers", type=int, default=2, help="corners labeled at once")
     args = ap.parse_args()
 
     folders = sorted(p for p in IMAGERY.glob("*") if (p / "meta.json").exists())
@@ -250,17 +263,23 @@ def main():
         return
 
     key = api_key()
-    for folder in folders:
+
+    def run(folder):
+        start = time.time()
         try:
             result = label_corner(folder, args.model, key)
         except (ValueError, KeyError, json.JSONDecodeError) as e:
-            print(f"{folder.name}: unusable answer ({e}); not cached, rerun to retry")
-            continue
-        if result:
-            a = result["answers"]
-            print(f"{folder.name}: signal {a['traffic_signal']}, {len(a['legs'])} legs")
-        else:
-            print(f"{folder.name}: no Street View views, skipped")
+            return f"{folder.name}: unusable answer ({e}); not cached, rerun to retry"
+        except RuntimeError as e:
+            return f"{folder.name}: failed ({e}); rerun to retry"
+        if not result:
+            return f"{folder.name}: no Street View views, skipped"
+        a = result["answers"]
+        return f"{folder.name}: signal {a['traffic_signal']}, {len(a['legs'])} legs ({time.time() - start:.0f} s)"
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        for line in pool.map(run, folders):
+            print(line, flush=True)
     print(f"wrote {write_csv(folders, args.model)} leg rows -> {OUT_CSV.relative_to(ROOT)}")
 
 

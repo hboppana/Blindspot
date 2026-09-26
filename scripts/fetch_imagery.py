@@ -2,7 +2,7 @@
 
 Workstream 2 labels road design with Gemini. Before labeling everything we
 hand-check 20 corners: the top HOTSPOTS hotspots (the demo depends on them)
-plus COMPARISON quieter corners near campus, spread across crash counts.
+plus COMPARISON quieter corners citywide, spread across crash counts.
 
 Per corner, into data/imagery/<corner id>/:
   satellite.png   Static Maps, zoom 20, centred on the intersection
@@ -47,7 +47,7 @@ from pathlib import Path
 
 import numpy as np
 
-from build_hotspots import CAMPUS_KM, _display, _slug
+from build_hotspots import _display, _slug
 from osm_features import fetch as fetch_osm, way_names
 from streets import ROUTE_NAME, street_base
 
@@ -58,7 +58,7 @@ CORNERS = DERIVED / "handcheck_corners.csv"
 
 HOTSPOTS = 12
 COMPARISON = 8
-COMPARISON_RANGE = (5, 40)  # crashes since 2022
+COMPARISON_RANGE = (5, 40)  # crashes in the hotspot window (2022 onward)
 
 STATIC_URL = "https://maps.googleapis.com/maps/api/staticmap"
 SV_URL = "https://maps.googleapis.com/maps/api/streetview"
@@ -103,15 +103,14 @@ def pick_corners():
     """Top hotspots plus comparison corners spread across lower crash counts."""
     hotspots = json.loads((DERIVED / "hotspots.json").read_text())["hotspots"]
     chosen = [{"id": h["id"], "name": h["name"], "lat": h["lat"], "lon": h["lon"],
-               "crashes_2022_on": h["crashes"]["crashes"], "role": "hotspot"}
+               "crashes_window": h["crashes"]["crashes"], "role": "hotspot"}
               for h in hotspots[:HOTSPOTS]]
     taken = {c["id"] for c in chosen}
 
     rows = list(csv.DictReader(open(DERIVED / "intersections.csv", encoding="utf-8")))
     lo, hi = COMPARISON_RANGE
-    pool = [r for r in rows
-            if float(r["campus_km"]) <= CAMPUS_KM and lo <= int(r["crashes_2022_on"]) <= hi]
-    pool.sort(key=lambda r: -int(r["crashes_2022_on"]))
+    pool = [r for r in rows if lo <= int(r["crashes_window"]) <= hi]
+    pool.sort(key=lambda r: -int(r["crashes_window"]))
     step = len(pool) / COMPARISON
     for k in range(COMPARISON):
         r = pool[int(k * step)]
@@ -120,7 +119,7 @@ def pick_corners():
             continue
         chosen.append({"id": cid, "name": _display(r["intersection_id"]),
                        "lat": round(float(r["lat"]), 6), "lon": round(float(r["lon"]), 6),
-                       "crashes_2022_on": int(r["crashes_2022_on"]), "role": "comparison"})
+                       "crashes_window": int(r["crashes_window"]), "role": "comparison"})
     return chosen
 
 
@@ -302,7 +301,7 @@ def main():
         w.writerows(corners)
     print(f"{len(corners)} hand-check corners -> {CORNERS.relative_to(ROOT)}")
     for c in corners:
-        print(f"  {c['role']:10s} {c['crashes_2022_on']:4d}  {c['name']}")
+        print(f"  {c['role']:10s} {c['crashes_window']:4d}  {c['name']}")
     if args.dry_run:
         return
 

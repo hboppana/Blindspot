@@ -272,8 +272,8 @@ if __name__ == "__main__":
     print(f"wrote {len(df)} rows -> {OUT.relative_to(ROOT)}")
 
     coverage(df, "All intersections")
-    top = inters.sort_values("crashes_2022_on", ascending=False).head(200).intersection_id
-    coverage(df[df.intersection_id.isin(top)], "Top 200 by crashes since 2022")
+    top = inters.sort_values("crashes_window", ascending=False).head(200).intersection_id
+    coverage(df[df.intersection_id.isin(top)], "Top 200 by recent crashes")
     hc = DERIVED / "handcheck_corners.csv"
     if hc.exists():
         from build_hotspots import _slug

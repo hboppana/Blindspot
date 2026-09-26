@@ -28,14 +28,21 @@ Step 4: attach FDOT crashes (see fdot.py), profile each intersection, and
   write the outputs:
     data/derived/intersections.csv  every intersection, with counts (the
                                     comparison corners for workstreams 2-3)
-    data/derived/hotspots.json      the top TOP_N within CAMPUS_KM of campus,
-                                    ranked by crashes since SINCE_YEAR, each
-                                    with a dataGNV profile and FDOT causes
+    data/derived/hotspots.json      every intersection with a crash in the
+                                    window, ranked citywide, each with a
+                                    dataGNV profile and FDOT causes
+
+The window is --since (default SINCE_YEAR) to --until (default: latest). With
+--until, crashes after it are dropped before anything else, so intersections
+are placed and ranked from those years only (the backtest), and
+intersections.csv is left alone.
 
 Requires: pip install pandas numpy
 Usage:    python scripts/build_hotspots.py
+          python scripts/build_hotspots.py --since 2015 --until 2021 --out data/derived/backtest_2015_2021.json
 """
 
+import argparse
 import json
 import re
 from datetime import date
@@ -53,9 +60,6 @@ CRASHES = ROOT / "data" / "processed" / "gnv_crashes_clean.csv"
 DERIVED = ROOT / "data" / "derived"
 
 SINCE_YEAR = 2022  # crashes dropped ~30% in 2020; current hotspots use 2022 onward
-CAMPUS = (29.6488, -82.3431)  # Century Tower, centre of the UF campus
-CAMPUS_KM = 6  # reaches the SW student-housing corridor: Archer to Butler Plaza, SW 20th Ave & 62nd Blvd
-TOP_N = 50
 UNCODED = {"NOT CODED", "UNKNOWN", "UNKNOWN/NOT CODED", "NaN"}
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -87,9 +91,11 @@ def parse_offset_ft(text):
     return value
 
 
-def load_intersection_crashes():
+def load_intersection_crashes(until=None):
     """All crashes with a pair key, plus a flag for whether each one counts."""
     d = pd.read_csv(CRASHES, low_memory=False)
+    if until is not None:
+        d = d[d.year <= until].reset_index(drop=True)
     names = pd.concat([d.street, d.cross_street]).dropna().unique()
     canon = {n: normalize_street(n) for n in names}
 
@@ -116,7 +122,7 @@ def _median_location(crashes):
     return use.latitude.median(), use.longitude.median()
 
 
-def merge_pairs(d):
+def merge_pairs(d, since=SINCE_YEAR):
     """Add an intersection_id to counted crashes; return the intersections table."""
     near = d[d.near]
     pairs = pd.DataFrame(
@@ -158,12 +164,12 @@ def merge_pairs(d):
     d["intersection_id"] = d.pair.map(dict(zip(pairs.pair, pairs.intersection_id))).where(d.near)
     counted = d[d.near]
     inters = pd.DataFrame(
-        [(i, *_median_location(g), len(g), (g.year >= 2022).sum(),
+        [(i, *_median_location(g), len(g), (g.year >= since).sum(),
           sorted(pairs.pair[pairs.intersection_id == i]))
          for i, g in counted.groupby("intersection_id")],
-        columns=["intersection_id", "lat", "lon", "crashes", "crashes_2022_on", "pairs"],
+        columns=["intersection_id", "lat", "lon", "crashes", "crashes_window", "pairs"],
     )
-    return inters.sort_values("crashes_2022_on", ascending=False).reset_index(drop=True)
+    return inters.sort_values("crashes_window", ascending=False).reset_index(drop=True)
 
 
 def nearest_intersection(lat, lon, inters):
@@ -196,7 +202,7 @@ def intersections_within(lat, lon, inters, radius_m):
     return out
 
 
-def snap_leftovers(d, inters):
+def snap_leftovers(d, inters, since=SINCE_YEAR):
     """Attach crashes with no pair key to the nearest intersection within SNAP_M.
 
     Only crashes with no pair key that are coded at an intersection are
@@ -220,16 +226,11 @@ def snap_leftovers(d, inters):
     counted = d[d.intersection_id.notna()]
     g = counted.groupby("intersection_id")
     inters["crashes"] = inters.intersection_id.map(g.size())
-    inters["crashes_2022_on"] = inters.intersection_id.map(g.year.apply(lambda y: (y >= 2022).sum()))
-    inters["snapped_2022_on"] = inters.intersection_id.map(
-        counted[counted.snapped & (counted.year >= 2022)].groupby("intersection_id").size()
+    inters["crashes_window"] = inters.intersection_id.map(g.year.apply(lambda y: (y >= since).sum()))
+    inters["snapped_window"] = inters.intersection_id.map(
+        counted[counted.snapped & (counted.year >= since)].groupby("intersection_id").size()
     ).fillna(0).astype(int)
-    return inters.sort_values("crashes_2022_on", ascending=False).reset_index(drop=True)
-
-
-def _distance_km(lat, lon, point):
-    return np.hypot((np.asarray(lon) - point[1]) * M_PER_DEG_LON,
-                    (np.asarray(lat) - point[0]) * M_PER_DEG_LAT) / 1000
+    return inters.sort_values("crashes_window", ascending=False).reset_index(drop=True)
 
 
 def _display(name):
@@ -303,7 +304,13 @@ def fdot_profile(h):
 
 
 if __name__ == "__main__":
-    d = load_intersection_crashes()
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--since", type=int, default=SINCE_YEAR, help="first year counted for ranking and profiles")
+    ap.add_argument("--until", type=int, help="drop crashes after this year (backtest)")
+    ap.add_argument("--out", default=str(DERIVED / "hotspots.json"))
+    args = ap.parse_args()
+
+    d = load_intersection_crashes(args.until)
 
     raw = d.offset_from_cross.notna()
     print(f"offsets: {raw.sum()} present, {d.offset_ft.notna().sum()} parsed, "
@@ -315,14 +322,14 @@ if __name__ == "__main__":
     far = d.pair.notna() & ~d.near
     print(f"  dropped: {far.sum()} ({(far & d.offset_ft.isna()).sum()} with no usable offset)")
 
-    inters = merge_pairs(d)
+    inters = merge_pairs(d, args.since)
     n_pairs = d.loc[d.near, "pair"].nunique()
     merged = inters[inters.pairs.map(len) > 1]
     print(f"\nmerge within {MERGE_M} m: {n_pairs} pairs -> {len(inters)} intersections "
           f"({len(merged)} absorbed at least one other pair)")
     print(f"largest group: {inters.pairs.map(len).max()} pairs")
 
-    inters = snap_leftovers(d, inters)
+    inters = snap_leftovers(d, inters, args.since)
     no_pair = d.pair.isna()
     no_pair_at = no_pair & (d.at_intersection == 1)
     print(f"\nsnap within {SNAP_M} m: {d.snapped.sum()} of {no_pair_at.sum()} crashes with no pair key "
@@ -340,46 +347,49 @@ if __name__ == "__main__":
           f"no street in common {(near & ~driveway & ~i75 & f.intersection_id.isna()).sum()}")
     inters["fdot_crashes"] = inters.intersection_id.map(f.intersection_id.value_counts()).fillna(0).astype(int)
 
-    # Hotspots: the busiest intersections near campus since SINCE_YEAR.
-    inters["campus_km"] = _distance_km(inters.lat, inters.lon, CAMPUS).round(2)
+    # Every intersection with a crash in the window, ranked citywide.
     DERIVED.mkdir(parents=True, exist_ok=True)
-    inters.assign(pairs=inters.pairs.map(" | ".join)).to_csv(DERIVED / "intersections.csv", index=False)
+    if args.until is None:  # a backtest run must not overwrite the current table
+        inters.assign(pairs=inters.pairs.map(" | ".join)).to_csv(DERIVED / "intersections.csv", index=False)
 
-    top = inters[inters.campus_km <= CAMPUS_KM].head(TOP_N)
-    recent = d[d.intersection_id.notna() & (d.year >= SINCE_YEAR)]
+    ranked = inters[inters.crashes_window > 0]
+    window = d[d.intersection_id.notna() & (d.year >= args.since)]
+    by_id_gnv = dict(tuple(window.groupby("intersection_id")))
+    by_id_fdot = dict(tuple(f[f.intersection_id.notna()].groupby("intersection_id")))
     hotspots = []
-    for rank, r in enumerate(top.itertuples(), 1):
+    for rank, r in enumerate(ranked.itertuples(), 1):
         hotspots.append({
             "id": _slug(r.intersection_id),
             "rank": rank,
             "name": _display(r.intersection_id),
             "lat": round(r.lat, 6), "lon": round(r.lon, 6),
-            "campus_km": r.campus_km,
             "merged_names": r.pairs,
             "crashes_all_years": int(r.crashes),
-            "crashes": gnv_profile(recent[recent.intersection_id == r.intersection_id]),
-            "causes_fdot": fdot_profile(f[f.intersection_id == r.intersection_id]),
+            "crashes": gnv_profile(by_id_gnv[r.intersection_id]),
+            "causes_fdot": fdot_profile(by_id_fdot.get(r.intersection_id, f.iloc[0:0])),
         })
 
+    last = d.crash_date.max()
     out = {
         "generated": str(date.today()),
         "definitions": {
-            "crashes": f"dataGNV crashes {SINCE_YEAR} to {d.crash_date.max()}, at the intersection "
+            "crashes": f"dataGNV crashes {args.since} to {last}, at the intersection "
                        f"or within {NEAR_FT} ft of it",
             "causes_fdot": f"FDOT crashes 2015 to 2019 (mostly 2015 to 2018) within {SNAP_M} m, "
                            "excluding driveway-related and I-75",
-            "hotspots": f"top {TOP_N} intersections by crashes since {SINCE_YEAR}, within "
-                        f"{CAMPUS_KM} km of campus centre {CAMPUS}",
+            "hotspots": f"every intersection with a crash from {args.since} to {last}, "
+                        "ranked citywide by that count",
             "shares": "share of coded values; NOT CODED / UNKNOWN left out",
             "roads": "FDOT road context per road at the corner, medians over its crashes",
         },
         "hotspots": hotspots,
     }
-    (DERIVED / "hotspots.json").write_text(json.dumps(out, indent=2))
-    print(f"\nwrote {len(inters)} intersections to data/derived/intersections.csv")
-    print(f"wrote {len(hotspots)} hotspots to data/derived/hotspots.json")
+    out_path = Path(args.out)
+    out_path.write_text(json.dumps(out, separators=(",", ":")))
+    if args.until is None:
+        print(f"\nwrote {len(inters)} intersections to data/derived/intersections.csv")
+    print(f"wrote {len(hotspots)} intersections ({out_path.stat().st_size / 1e6:.1f} MB) to {out_path}")
 
-    print(f"\nHotspots within {CAMPUS_KM} km of campus (crashes since {SINCE_YEAR} / FDOT crashes):")
+    print(f"\nTop 15 citywide (crashes {args.since} to {last} / FDOT crashes):")
     for h in hotspots[:15]:
-        print(f"{h['rank']:3d}. {h['crashes']['crashes']:4d} / {h['causes_fdot']['crashes']:4d}  "
-              f"{h['campus_km']:.1f} km  {h['name']}")
+        print(f"{h['rank']:3d}. {h['crashes']['crashes']:4d} / {h['causes_fdot']['crashes']:4d}  {h['name']}")
