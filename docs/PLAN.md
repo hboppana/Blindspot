@@ -1,4 +1,4 @@
-# Blindspot: Build Plan
+# StreetSmart: Build Plan
 
 Sep 26, 2026 · @Hemanshu
 
@@ -6,11 +6,11 @@ Sep 26, 2026 · @Hemanshu
 
 ## Overview
 
-Blindspot is road intelligence for cities. It investigates every intersection in a city, finds why crashes keep happening there, and recommends the fix with the strongest evidence. It is our ShellHacks 2026 entry, running first on Gainesville.
+StreetSmart is road intelligence for cities. It investigates every intersection in a city, finds why crashes keep happening there, and recommends the fix with the strongest evidence. It is our ShellHacks 2026 entry, running first on Gainesville.
 
 **The problem.** When an intersection keeps crashing, traffic engineers run a road safety audit: pull crash reports, visit the site, study the layout, write up causes and fixes. It takes weeks per intersection, so a city audits a handful a year. Everything else waits for someone to get hurt.
 
-**The product.** Blindspot audits all of them in an afternoon. For every intersection it combines crash history, road design read from imagery, and citywide statistics into a case file: what keeps happening, why, and what fixed it elsewhere. Then it ranks what to fix first.
+**The product.** StreetSmart audits all of them in an afternoon. For every intersection it combines crash history, road design read from imagery, and citywide statistics into a case file: what keeps happening, why, and what fixed it elsewhere. Then it ranks what to fix first.
 
 **Who uses it**
 
@@ -28,7 +28,7 @@ Blindspot is road intelligence for cities. It investigates every intersection in
 - **Every claim is evidence-backed and dated.** Causes come from citywide comparisons; fixes come with FHWA crash reduction numbers and, where possible, a proven result in the same city.
 - **No hardware, any city.** Runs on public crash records and public imagery.
 
-**Validation to cite.** Samsara launched AI road intelligence for public agencies in May 2026 (pothole detection from fleet data), with counties as customers. Governments are buying this category. Samsara finds surface defects; Blindspot finds the design problems behind repeat crashes.
+**Validation to cite.** Samsara launched AI road intelligence for public agencies in May 2026 (pothole detection from fleet data), with counties as customers. Governments are buying this category. Samsara finds surface defects; StreetSmart finds the design problems behind repeat crashes.
 
 **Tracks:** Best Overall (automatic), Waymo (primary), State Farm, Microsoft, MLH Gemini, MLH Tiger Data, MLH GoDaddy, MLH DigitalOcean. Confirm with organizers whether there is a cap on tracks per project.
 
@@ -143,7 +143,7 @@ Goal: proof the method works.
 
 - [ ] Run stages 1 to 3 on 2015 to 2021 data only
 - [ ] Check how many of the top 20 intersections for 2022 to 2026 it flagged
-- [ ] One headline number for the pitch: "Using only pre-2022 data, Blindspot flagged N of today's top 20"
+- [ ] One headline number for the pitch: "Using only pre-2022 data, StreetSmart flagged N of today's top 20"
 
 ### 6. Case files and audit report
 
@@ -203,7 +203,7 @@ Protect three things above all: the case file (verdict, annotated imagery, evide
 | Old FDOT causes (2015 to 2018) | Use only where the pattern held; say it once in the pitch |
 | Street View is old or blocked | Satellite is the default; always show capture dates |
 | API quota or latency on stage | Everything precomputed; backup video ready |
-| "Isn't this just a crash map?" | Crash maps show where. Blindspot shows why, what fixes it, and ranks what to fix first |
+| "Isn't this just a crash map?" | Crash maps show where. StreetSmart shows why, what fixes it, and ranks what to fix first |
 | "Why not Miami?" | Florida's public crash data stops at 2019; Gainesville publishes current data. Works for any city that does |
 
 ## Demo and pitch
@@ -214,10 +214,10 @@ About 90 seconds. Lead with one true finding, not the map.
 2. **The finding:** open the Archer Rd & 34th St case file. 275 crashes since 2022. Annotated imagery shows what Gemini found. Corners designed like this crash N times more than similar-traffic corners.
 3. **The fix:** the recommended countermeasure with FHWA's number, and a Gainesville corner where the same change cut crashes X%.
 4. **The scale:** zoom out. "We investigated all 1,834 intersections in Gainesville." The fix list: these 10 address X crashes a year.
-5. **The proof:** "Using only pre-2022 data, Blindspot flagged N of today's top 20."
-6. **The market:** "In May, Samsara launched AI road intelligence for cities. Potholes damage cars. Road design kills people. Blindspot finds that, in any city that publishes crash data."
+5. **The proof:** "Using only pre-2022 data, StreetSmart flagged N of today's top 20."
+6. **The market:** "In May, Samsara launched AI road intelligence for cities. Potholes damage cars. Road design kills people. StreetSmart finds that, in any city that publishes crash data."
 
-**Closing line:** "Every crash leaves evidence. Blindspot reads it, for every intersection, so cities fix the next one before it happens."
+**Closing line:** "Every crash leaves evidence. StreetSmart reads it, for every intersection, so cities fix the next one before it happens."
 
 Open questions:
 

@@ -77,7 +77,7 @@ def fetch(refetch=False):
     data = urllib.parse.urlencode({"data": QUERY}).encode()
     # Public Overpass servers are often busy (429/504); retry, then try the mirror.
     for attempt, url in enumerate([OVERPASS, OVERPASS, OVERPASS_MIRROR, OVERPASS_MIRROR]):
-        req = urllib.request.Request(url, data=data, headers={"User-Agent": "Blindspot (ShellHacks 2026)"})
+        req = urllib.request.Request(url, data=data, headers={"User-Agent": "StreetSmart (ShellHacks 2026)"})
         try:
             with urllib.request.urlopen(req, timeout=400) as resp:
                 body = resp.read()

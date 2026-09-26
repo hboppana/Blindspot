@@ -1,4 +1,4 @@
-"""Download Blindspot's crash data into data/raw/ as CSV.
+"""Download StreetSmart's crash data into data/raw/ as CSV.
 
 Sources
   1. dataGNV Traffic Crashes (City of Gainesville, Socrata dataset iecn-3sxx)
@@ -53,7 +53,7 @@ def get_json(url, params, retries=4):
     full = url + "?" + urllib.parse.urlencode(params)
     for attempt in range(retries):
         try:
-            req = urllib.request.Request(full, headers={"User-Agent": "blindspot-fetch/1.0"})
+            req = urllib.request.Request(full, headers={"User-Agent": "streetsmart-fetch/1.0"})
             with urllib.request.urlopen(req, timeout=120) as r:
                 return json.load(r)
         except Exception as e:  # network hiccup: back off and retry

@@ -1,6 +1,6 @@
-# Blindspot
+# StreetSmart
 
-Blindspot is road intelligence for cities. It investigates every intersection, finds why crashes keep happening there using Gemini-labeled road imagery and statistics on public crash data, and ranks which fixes to make first.
+StreetSmart is road intelligence for cities. It investigates every intersection, finds why crashes keep happening there using Gemini-labeled road imagery and statistics on public crash data, and ranks which fixes to make first.
 
 See [docs/PLAN.md](docs/PLAN.md) for the build plan.
 
