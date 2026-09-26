@@ -4,11 +4,17 @@ FDOT (2015 to 2018, plus 282 rows in 2019) is where the causes come from:
 driver actions, manner of collision, vehicle movement, lighting, and road
 context (speed limit, lanes, traffic volume). dataGNV has none of these.
 
-Unlike dataGNV, FDOT coordinates are real crash positions: matched against
-dataGNV, FDOT's distance from the corner tracks the offset dataGNV reports
-(about 146 m for a reported 152 m). So FDOT crashes snap by distance.
+Most FDOT crashes in Gainesville are also in dataGNV: FDOT's crash number is
+dataGNV's dhsmv_number followed by a 0 (17,602 linked, 2015-2018). A linked
+crash goes wherever dataGNV put it (see link_to_gnv), so the FDOT causes
+describe exactly the crashes counted at each intersection.
 
-A crash attaches to the nearest intersection within SNAP_M that shares a
+The rest (county roads, crashes dataGNV doesn't have) snap by distance.
+FDOT coordinates are real crash positions: matched against dataGNV, FDOT's
+distance from the corner tracks the offset dataGNV reports (about 146 m for
+a reported 152 m).
+
+A crash snapped by distance attaches to the nearest intersection within SNAP_M that shares a
 street with it, unless:
   - it is coded driveway/alley related (JCT_CD 4), the same call we made
     for dataGNV's address-only crashes;
@@ -70,10 +76,23 @@ def load_fdot():
     for col, name in FLAGS.items():
         f[name] = f[col] == "Y"
 
+    # XID = year + FDOT crash number; the crash number is dataGNV's dhsmv_number + "0".
+    f["dhsmv_number"] = f.XID.astype(str).str[4:-1]
+
     names = pd.concat([f.ON_ROADWAY_NAME, f.INT_ROADWAY_NAME]).dropna().unique()
     canon = {n: normalize_street(n) for n in names}
     f["on_norm"] = f.ON_ROADWAY_NAME.map(canon)
     f["int_norm"] = f.INT_ROADWAY_NAME.map(canon)
+    return f
+
+
+def link_to_gnv(f, d):
+    """For FDOT crashes that are also in dataGNV, take dataGNV's intersection
+    (or none, if dataGNV counts that crash as mid-block). Sets f.linked."""
+    gnv = d.dropna(subset=["dhsmv_number"]).drop_duplicates("dhsmv_number")
+    where = dict(zip(gnv.dhsmv_number.astype("int64").astype(str), gnv.intersection_id))
+    f["linked"] = f.dhsmv_number.isin(where)
+    f.loc[f.linked, "intersection_id"] = f.loc[f.linked, "dhsmv_number"].map(where)
     return f
 
 

@@ -52,7 +52,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from fdot import FLAGS, load_fdot, snap_fdot
+from fdot import FLAGS, link_to_gnv, load_fdot, snap_fdot
 from streets import ROUTE_NAME, normalize_street, pair_key, street_base
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -337,13 +337,21 @@ if __name__ == "__main__":
     print(f"crashes on an intersection: {d.intersection_id.notna().sum()} of {len(d)}")
 
     # FDOT join
+    # FDOT join: crashes also in dataGNV follow dataGNV's assignment; the rest snap by distance.
     f = snap_fdot(load_fdot(), inters, intersections_within, SNAP_M)
-    near = f.near_corner
+    snapped_id = f.intersection_id.copy()
+    f = link_to_gnv(f, d)
+    near = f.near_corner & ~f.linked
     driveway = near & (f.JCT_CD == 4)
     i75 = near & ~driveway & (f.on_norm.isna() | (f.on_norm == "SR 93"))
-    print(f"\nFDOT: {len(f)} crashes after dropping duplicates; {near.sum()} within {SNAP_M} m of an "
-          f"intersection, {f.intersection_id.notna().sum()} attached")
-    print(f"  left out near a corner: driveway {driveway.sum()}, I-75 or no road {i75.sum()}, "
+    print(f"\nFDOT: {len(f)} crashes after dropping duplicates; {f.intersection_id.notna().sum()} attached")
+    print(f"  linked to dataGNV by report number: {f.linked.sum()} "
+          f"({(f.linked & f.intersection_id.notna()).sum()} at an intersection, the rest mid-block)")
+    both = f.linked & (f.intersection_id.notna() | snapped_id.notna())
+    print(f"    where distance matching would have put them elsewhere or nowhere: "
+          f"{(both & (f.intersection_id.fillna('') != snapped_id.fillna(''))).sum()} of {both.sum()}")
+    print(f"  snapped by distance (not in dataGNV): {(~f.linked & f.intersection_id.notna()).sum()}; left out near "
+          f"a corner: driveway {driveway.sum()}, I-75 or no road {i75.sum()}, "
           f"no street in common {(near & ~driveway & ~i75 & f.intersection_id.isna()).sum()}")
     inters["fdot_crashes"] = inters.intersection_id.map(f.intersection_id.value_counts()).fillna(0).astype(int)
 

@@ -61,6 +61,9 @@ def clean_gnv():
         date = r.get("accident_date", "")
         out.append({
             "case_number": r.get("case_number", ""),
+            # State crash report number. FDOT's CRASH_NUMBER is this with a
+            # trailing 0, which links the two sources crash by crash.
+            "dhsmv_number": str(to_int(r.get("dhsmv_number"))) if r.get("dhsmv_number") else "",
             "crash_datetime": date[:19],
             "crash_date": date[:10],
             "year": date[:4],
