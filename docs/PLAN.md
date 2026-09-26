@@ -39,7 +39,7 @@ The data layer is done: both crash sources are downloaded, cleaned and committed
 - dataGNV has no cause fields. Causes come from FDOT, which is really 2015 to 2018 (only 282 Alachua rows in 2019).
 - FDOT fields ending in `_CD` are numeric codes that need decoding. Fields ending in `_TXT` are readable.
 - Crashes dropped about 30% in 2020. Use 2022 onward for current hotspots.
-- Top hotspot since 2022: SW Archer Rd & SW 34th St, 256 crashes across both name orders.
+- Top hotspot since 2022: SW Archer Rd & SW 34th St, 275 crashes at the corner or within 150 ft, all spellings merged.
 
 ## Architecture
 
@@ -67,14 +67,14 @@ Eight workstreams, in build order. Each ends in something the next one can use.
 
 Goal: a table of the top ~50 intersections near campus and student housing, each with a crash profile.
 
-- [ ] Snap crashes to intersections (cluster within ~40 m, or a sorted street pair plus location)
-- [ ] Rank by crash count, 2022 onward
-- [ ] Profile each: share involving pedestrians, bikes, mopeds; hour and day pattern; severity; at-intersection share
-- [ ] Join FDOT 2015 to 2018 crashes at the same spot: top driver actions, collision types, lighting, speed limit, lanes, traffic volume
-- [ ] Decode FDOT `_CD` fields used
-- [ ] Output: `data/derived/hotspots.json`
+- [x] Snap crashes to intersections (cluster within ~40 m, or a sorted street pair plus location)
+- [x] Rank by crash count, 2022 onward
+- [x] Profile each: share involving pedestrians, bikes, mopeds; hour and day pattern; severity; at-intersection share
+- [x] Join FDOT 2015 to 2018 crashes at the same spot: top driver actions, collision types, lighting, speed limit, lanes, traffic volume
+- [x] Decode FDOT `_CD` fields used
+- [x] Output: `data/derived/hotspots.json`
 
-Done when: the Archer Rd & 34th St profile reads true on a hand check.
+Notes: build items done; the Archer Rd & 34th St hand check is still pending. Severity since 2022 is fatalities only; injury severity comes from FDOT (2015 to 2018). Six hotspots have under 20 FDOT crashes, mostly plaza roads FDOT doesn't cover.
 
 ### 2. Road-feature labeling with Gemini
 
