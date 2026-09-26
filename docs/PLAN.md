@@ -154,11 +154,12 @@ Goal: all user-facing text, precomputed and grounded.
 - [x] Prompt gets only computed facts; it may not add numbers (checked automatically, plus no causal wording and fixes only from the library; ~350 older files below the top 50 may still mix 2015-18 and 2022+ counts)
 - [x] City summary numbers: intersections investigated, with repeat crashes, with a clear fixable cause; crashes a year at the top 10 (1,834 investigated, 411 repeat, 76 clear fixable pattern; top 10: 358 crashes a year, 206 above similar corners)
 
-### 7. Database and API
+### 7. Database and API (done except PDF export)
 
-- [ ] Load intersections, features, factors, fixes and case files into Tiger Data
-- [ ] Continuous aggregate for crashes by year and hour (feeds the case file charts)
-- [ ] FastAPI: `GET /city/summary`, `GET /intersections` (filters: cause, min crashes, mode), `GET /intersections/{id}`, `GET /intersections/{id}/report.pdf`, `GET /fix-list`
+- [x] Load intersections, features, factors, fixes and case files into Tiger Data (`scripts/load_db.py`, schema in `api/schema.sql`; 1,833 intersections, 411 with a Gemini description, 1,239 case files)
+- [x] ~~Continuous aggregate for crashes by year and hour (feeds the case file charts)~~ Changed: per-intersection charts use the totals in the case file (`crash_profile`). All 60,466 dataGNV crashes are a hypertable with a monthly citywide continuous aggregate (`crashes_monthly`, served at `GET /city/trend`)
+- [x] FastAPI: `GET /city/summary`, `GET /city/trend`, `GET /intersections` (filters: factor, min crashes, mode, Gemini description, confidence), `GET /intersections/{id}`, `GET /fix-list` (docs in `docs/API.md`)
+- [ ] `GET /intersections/{id}/report.pdf` (deferred; first on the cut list)
 
 ### 8. Frontend: city audit console
 

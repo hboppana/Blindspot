@@ -1,0 +1,11 @@
+# Data pipeline (scripts/)
+pandas
+numpy
+pyproj
+statsmodels
+
+# Database and API (scripts/load_db.py, api/)
+psycopg[binary]
+psycopg-pool
+fastapi
+uvicorn[standard]
