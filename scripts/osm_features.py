@@ -61,6 +61,8 @@ out body qt;
 """
 
 JUNCTION_M = 60  # our intersection point to the OSM junction node
+ROAD_RANK = {"motorway": 1, "trunk": 1, "primary": 2, "secondary": 3, "tertiary": 4,
+             "unclassified": 5, "residential": 6, "living_street": 7}
 BOX_M = 45       # crossing nodes this close to the nearest one belong to the same junction
 NEAR_M = 50      # signals, crossings and road ways counted around the intersection
 NAME_TAGS = ("name", "alt_name", "old_name", "official_name", "ref")
@@ -156,6 +158,7 @@ def street_features(ways, nodes):
         "divided": "yes" if opposite else ("no" if two_way or oneway_dirs else ""),
         "one_way": "yes" if oneway_dirs and not opposite and not two_way else "",
         "speed_mph": max(speeds) if speeds else None,
+        "road_class": min((ROAD_RANK.get(t.get("highway", "").replace("_link", ""), 9) for t in tags), default=9),
     }
 
 
@@ -253,6 +256,10 @@ def build(osm, inters):
                 "divided": tri([v["divided"] for v in vals], {"yes"}, {"no"}),
                 "one_way_street": "yes" if any(v["one_way"] == "yes" for v in vals) else "",
                 "max_speed_mph": max((v["speed_mph"] for v in vals if v["speed_mph"]), default=None),
+                # Road class of the major and the minor street (1 trunk .. 7 living street):
+                # the traffic-volume stand-in where FDOT has no count.
+                "major_road_class": min((v["road_class"] for v in vals), default=None),
+                "minor_road_class": sorted(v["road_class"] for v in vals)[1] if len(vals) > 1 else None,
                 "streets": json.dumps(per_street),
             })
         rows.append(row)
