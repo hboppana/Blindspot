@@ -6,16 +6,21 @@ plus COMPARISON quieter corners near campus, spread across crash counts.
 
 Per corner, into data/imagery/<corner id>/:
   satellite.png   Static Maps, zoom 20, centred on the intersection
-  sv_<n>.jpg      one Street View image per road leg, taken ~PROBE_M up the
+  sv_<n>.jpg      one Street View image per road leg, taken ~TARGET_M up the
                   leg and pointed back at the intersection, tilted down so
                   lane arrows and crosswalks are in frame
   meta.json       corner, capture dates, pano ids, headings
 
 Finding the legs: Street View metadata requests are free and use no quota,
-so we probe PROBE_BEARINGS directions around the corner. A pano found out
-along a direction means a road leg there; bearings closer than LEG_GAP_DEG
-are the same leg. If fewer than 2 legs turn up, we fall back to the centre
-pano with four fixed headings.
+so we probe PROBE_BEARINGS directions at PROBE_DISTANCES around the corner.
+A pano only counts if it sits on one of the corner's own streets (within
+ON_ROAD_M of its OSM centreline), which rules out parking lots and side
+streets. Bearings closer than LEG_GAP_DEG are the same leg; each leg takes
+the pano nearest TARGET_M out, far enough to be behind the stop line of a
+big intersection (Archer & 34th is ~70 m across). If fewer than 2 legs turn
+up, we fall back to the centre pano with four fixed headings.
+
+Corners whose views came from an older LEG_METHOD get their views redone.
 
 Billed requests: 1 satellite + up to MAX_LEGS Street View images per corner.
 Anything already on disk is never fetched again.
@@ -40,7 +45,11 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+
 from build_hotspots import CAMPUS_KM, _display, _slug
+from osm_features import fetch as fetch_osm, way_names
+from streets import ROUTE_NAME, street_base
 
 ROOT = Path(__file__).resolve().parent.parent
 DERIVED = ROOT / "data" / "derived"
@@ -62,10 +71,13 @@ SV_SIZE = "640x640"
 SV_FOV = 80
 SV_PITCH = -10
 
-PROBE_M = 35
+LEG_METHOD = 3
+PROBE_DISTANCES = (30, 50, 70)
 PROBE_RADIUS_M = 15
 PROBE_BEARINGS = range(0, 360, 30)
-LEG_DIST_M = (15, 60)  # a pano this far from the centre can show a leg
+LEG_DIST_M = (20, 85)  # a pano this far from the centre can show a leg
+TARGET_M = 50
+ON_ROAD_M = 10
 LEG_GAP_DEG = 50
 MAX_LEGS = 4
 
@@ -151,28 +163,84 @@ def save_image(url, params, key, path):
     path.write_bytes(body)
 
 
+_OSM = None
+
+
+def corner_roads(corner):
+    """Segments (x1, y1, x2, y2 in metres from the corner) of the corner's own
+    streets in OSM, within 150 m. None if OSM has none of them."""
+    global _OSM
+    if _OSM is None:
+        osm = fetch_osm()
+        nodes = {e["id"]: (e["lat"], e["lon"]) for e in osm["elements"] if e["type"] == "node"}
+        _OSM = [(way_names(w.get("tags", {})), [nodes[n] for n in w["nodes"] if n in nodes])
+                for w in osm["elements"]
+                if w["type"] == "way" and "highway" in w.get("tags", {})
+                and w["tags"].get("footway") != "crossing"]
+        _OSM = [(names, {street_base(n) for n in names}, pts) for names, pts in _OSM if names]
+
+    pairs = {r["intersection_id"]: r["pairs"]
+             for r in csv.DictReader(open(DERIVED / "intersections.csv", encoding="utf-8"))
+             if _slug(r["intersection_id"]) == corner["id"]}
+    if not pairs:
+        return None
+    streets = {s for p in next(iter(pairs.values())).split(" | ") for s in p.split(" & ")}
+    routes = {s for s in streets if ROUTE_NAME.match(s)}
+    bases = {street_base(s) for s in streets - routes}
+
+    segs = []
+    for names, way_bases, pts in _OSM:
+        if not (way_bases & bases or names & routes):
+            continue
+        xy = [((lo - corner["lon"]) * M_PER_DEG_LON, (la - corner["lat"]) * M_PER_DEG_LAT) for la, lo in pts]
+        if min(math.hypot(x, y) for x, y in xy) > 150:
+            continue
+        segs += [(*a, *b) for a, b in zip(xy, xy[1:])]
+    return np.array(segs) if segs else None
+
+
+def dist_to_segments(x, y, segs):
+    x1, y1, x2, y2 = segs.T
+    dx, dy = x2 - x1, y2 - y1
+    t = np.clip(((x - x1) * dx + (y - y1) * dy) / np.maximum(dx * dx + dy * dy, 1e-9), 0, 1)
+    return float(np.min(np.hypot(x - (x1 + t * dx), y - (y1 + t * dy))))
+
+
 def find_legs(corner, key):
-    """Panos out along each road leg, with the heading back to the centre."""
+    """Panos out along each road leg, on the corner's own streets, with the heading back to the centre."""
     lat, lon = corner["lat"], corner["lon"]
+    roads = corner_roads(corner)
     found = {}
     for b in PROBE_BEARINGS:
-        meta = sv_metadata(*offset(lat, lon, b, PROBE_M), key)
-        if not meta or meta["pano_id"] in found:
-            continue
-        p = meta["location"]
-        leg_bearing, dist = bearing_and_dist(lat, lon, p["lat"], p["lng"])
-        if LEG_DIST_M[0] <= dist <= LEG_DIST_M[1]:
+        for d in PROBE_DISTANCES:
+            meta = sv_metadata(*offset(lat, lon, b, d), key)
+            if not meta or meta["pano_id"] in found:
+                continue
+            p = meta["location"]
+            leg_bearing, dist = bearing_and_dist(lat, lon, p["lat"], p["lng"])
+            if not LEG_DIST_M[0] <= dist <= LEG_DIST_M[1]:
+                continue
+            off_road = None
+            if roads is not None:
+                off_road = dist_to_segments((p["lng"] - lon) * M_PER_DEG_LON,
+                                            (p["lat"] - lat) * M_PER_DEG_LAT, roads)
+                if off_road > ON_ROAD_M:
+                    continue
             found[meta["pano_id"]] = {"pano_id": meta["pano_id"], "pano_lat": p["lat"],
                                       "pano_lon": p["lng"], "date": meta.get("date"),
                                       "leg_bearing": round(leg_bearing), "distance_m": round(dist),
+                                      "road_offset_m": None if off_road is None else round(off_road, 1),
+                                      "copyright": meta.get("copyright", ""),
                                       "heading": round((leg_bearing + 180) % 360)}
 
-    # One pano per leg: the one nearest PROBE_M out.
+    # One pano per leg: Google's own imagery first (third-party 360 photos are
+    # older and often show the photographer's car), then the one nearest TARGET_M out.
     legs = []
-    for pano in sorted(found.values(), key=lambda p: abs(p["distance_m"] - PROBE_M)):
+    for pano in sorted(found.values(), key=lambda p: ("Google" not in p["copyright"],
+                                                       abs(p["distance_m"] - TARGET_M))):
         if all(angle_gap(pano["leg_bearing"], l["leg_bearing"]) >= LEG_GAP_DEG for l in legs):
             legs.append(pano)
-    return sorted(legs[:MAX_LEGS], key=lambda l: l["leg_bearing"])
+    return sorted(legs[:MAX_LEGS], key=lambda l: l["leg_bearing"]), roads is not None
 
 
 def fetch_corner(corner, key):
@@ -187,10 +255,16 @@ def fetch_corner(corner, key):
                                 "size": SAT_SIZE, "scale": SAT_SCALE, "maptype": "satellite"}, key, sat)
     meta["satellite"] = {"file": sat.name, "zoom": SAT_ZOOM}
 
-    if "views" not in meta:
+    if meta.get("leg_method") != LEG_METHOD:
+        # Views from an older method (or none yet): drop them and find the legs again.
+        for v in meta.get("views", []):
+            (folder / v["file"]).unlink(missing_ok=True)
+        for old in folder.glob("gemini_*.json"):  # labels were made from the old views
+            old.unlink()
         centre = sv_metadata(corner["lat"], corner["lon"], key, radius=30)
         meta["centre_pano"] = centre and {"pano_id": centre["pano_id"], "date": centre.get("date")}
-        legs = find_legs(corner, key)
+        legs, meta["road_check"] = find_legs(corner, key)
+        meta["leg_method"] = LEG_METHOD
         if len(legs) >= 2:
             meta["view_method"] = "legs"
             meta["views"] = legs

@@ -1,0 +1,5 @@
+corner_id,leg,leg_bearing,view_method,capture_date,traffic_signal,stop_sign,marked_crosswalk,left_turn_lane,protected_left_arrow,bike_lane,median,pedestrian_signal,travel_lanes,evidence,model,prompt_version
+sw-34th-st-sw-archer-rd,1,23,legs,2025-04,yes,no,yes,yes,cant_tell,no,yes,cant_tell,6,"Images 1 and 2 show marked crosswalk, median, dual left-turn lanes, six travel lanes, and unlit left-turn signals; no bike lane seen.",gemini-3.8-flash,1
+sw-34th-st-sw-archer-rd,2,176,legs,2026-01,yes,no,yes,yes,cant_tell,yes,yes,cant_tell,6,"Images 1 and 3 show marked crosswalk, painted bike lane, median, dual left-turn lanes, six travel lanes; signals and ped signals unclear.",gemini-3.8-flash,1
+sw-34th-st-sw-archer-rd,3,234,legs,2026-02,yes,no,yes,yes,cant_tell,no,yes,cant_tell,6,"Images 1 and 4 show marked crosswalk, median, dual left-turn lanes, six travel lanes; no bike lane; signal heads unlit.",gemini-3.8-flash,1
+sw-34th-st-sw-archer-rd,4,328,legs,2026-02,yes,no,yes,yes,cant_tell,no,yes,cant_tell,6,"Images 1 and 5 show marked crosswalk, median, dual left-turn lanes, six travel lanes; left-turn arrows unlit; no bike lane seen.",gemini-3.8-flash,1
