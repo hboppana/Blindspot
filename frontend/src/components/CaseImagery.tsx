@@ -46,7 +46,7 @@ export function CaseImagery({
             />
           </div>
           <figcaption className="mt-1 text-xs opacity-60">
-            Satellite · Google
+            Satellite imagery from Google
           </figcaption>
         </figure>
         <StreetView center={center} name={name} />
@@ -119,8 +119,8 @@ function StreetView({
         )}
       </div>
       <figcaption className="mt-1 text-xs opacity-60">
-        Street View · Google
-        {state.status === "ok" && state.date && ` · captured ${state.date}`}
+        Street View from Google
+        {state.status === "ok" && state.date && `, captured ${state.date}`}
       </figcaption>
     </figure>
   );

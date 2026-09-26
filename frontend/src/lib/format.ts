@@ -67,3 +67,7 @@ export const titleCase = (name: string) =>
     if (KEEP_UPPER.has(upper) || /^I-\d+$/.test(upper)) return upper;
     return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
   });
+
+/** "2026-07-23" -> "July 2026" */
+export const monthYear = (iso: string) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" });

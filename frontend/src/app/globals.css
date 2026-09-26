@@ -1,38 +1,80 @@
 @import "tailwindcss";
 
-/* Chart tokens: first three slots of the dataviz reference palette
-   (validated all-pairs for CVD in both modes). */
+/* Data colours: first three slots of the dataviz reference palette
+   (validated all-pairs for CVD in both modes). They stay data-only.
+
+   Interface colours come from the road: asphalt for structure, concrete for
+   the page, lane-marking yellow as the one bold element, guide-sign green for
+   "this worked". Type is Overpass, a descendant of the Highway Gothic lettering
+   on US road signs. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eceeef; /* concrete */
+  --surface: #ffffff; /* paper */
+  --foreground: #1f2226; /* asphalt */
+  --line: #d5d9dc;
   --ink-secondary: #52514e;
-  --ink-muted: #898781;
+  --ink-muted: #5f666d;
   --grid: #e1e0d9;
   --baseline: #c3c2b7;
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
   --reference: #b4b2a9;
+
+  --brand: #1f2226; /* asphalt */
+  --brand-hover: #353a40;
+  --brand-ink: #1f2226;
+  --brand-soft: #f3f4f5;
+  --accent: #f6c700; /* lane-marking yellow */
+  --accent-soft: #fff4c2;
+  --accent-ink: #6b5200;
+  --good-soft: #e1f0ea;
+  --good-ink: #0b6e4f; /* guide-sign green */
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-line: var(--line);
+  --color-muted: var(--ink-muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-good-soft: var(--good-soft);
+  --color-good-ink: var(--good-ink);
+  --font-sans: var(--font-overpass);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #15171a;
+    --surface: #1d2024;
+    --foreground: #eceeef;
+    --line: #30343a;
     --ink-secondary: #c3c2b7;
+    --ink-muted: #9aa1a8;
     --grid: #2c2c2a;
     --baseline: #383835;
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
     --reference: #5f5e5a;
+
+    --brand: #0f1113;
+    --brand-hover: #2a2e33;
+    --brand-ink: #eceeef;
+    --brand-soft: #24282d;
+    --accent: #f6c700;
+    --accent-soft: #3b3108;
+    --accent-ink: #f7d556;
+    --good-soft: #0f2c22;
+    --good-ink: #5fd3a2;
   }
 }
 
@@ -40,4 +82,36 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* The one bold element: the header ends in a strip of asphalt with a dashed
+   centre line, like the road it's about. */
+.lane-line {
+  height: 10px;
+  background:
+    repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)
+      left center / 100% 3px no-repeat,
+    var(--brand);
+}
+
+/* Links read like a painted marking: asphalt text, yellow underline. */
+.road-link {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.road-link:hover {
+  text-decoration-thickness: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
 }

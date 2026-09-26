@@ -56,11 +56,11 @@ export function CityView({
   }, [selectedId]);
 
   const selectClass =
-    "rounded border border-black/15 bg-transparent px-2 py-1 dark:border-white/20";
+    "rounded-md border border-line bg-surface px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/60";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-black/10 px-4 py-2 text-sm dark:border-white/15">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-line bg-surface px-4 py-2 text-sm">
         <label className="flex items-center gap-2">
           Main factor
           <select
@@ -107,26 +107,10 @@ export function CityView({
             type="checkbox"
             checked={confidentOnly}
             onChange={(e) => setConfidentOnly(e.target.checked)}
+            className="accent-brand"
           />
           Confident cause only
         </label>
-        <span className="opacity-60">{num(filtered.length)} shown</span>
-
-        <ul className="ml-auto flex flex-wrap gap-4 text-xs">
-          {Object.values(FACTOR_GROUPS).map((g) => (
-            <li key={g.label} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ background: g.color }}
-              />
-              {g.label}
-            </li>
-          ))}
-          <li className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-black dark:border-white" />
-            On the fix list
-          </li>
-        </ul>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -137,9 +121,30 @@ export function CityView({
             selectedId={selectedId}
             onSelect={select}
           />
+          <div className="pointer-events-none absolute top-2.5 right-2.5 hidden rounded-md md:block bg-surface/95 px-3 py-2 text-xs shadow-sm ring-1 ring-line">
+            <p className="mb-1 font-bold">Main crash type</p>
+            <ul className="space-y-0.5">
+              {Object.values(FACTOR_GROUPS).map((g) => (
+                <li key={g.label} className="flex items-center gap-2">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: g.color }} />
+                  {g.label}
+                </li>
+              ))}
+              <li className="flex items-center gap-2">
+                <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-foreground" />
+                On the fix list
+              </li>
+            </ul>
+            <p className="mt-1 text-muted">Size shows crashes since 2022</p>
+          </div>
         </div>
 
-        <ol className="overflow-y-auto border-black/10 md:w-96 md:border-l dark:border-white/15">
+        <div className="flex min-h-0 flex-col border-line bg-surface md:w-96 md:border-l">
+        <div className="flex items-baseline justify-between border-b border-line px-4 py-2.5">
+          <h2 className="text-sm font-bold">Ranked by crashes above similar corners</h2>
+          <span className="text-xs text-muted tabular-nums">{num(filtered.length)}</span>
+        </div>
+        <ol className="min-h-0 flex-1 overflow-y-auto max-md:max-h-[60vh]">
           {filtered.map((i) => {
             const selected = i.id === selectedId;
             const g = factorGroup(i);
@@ -150,35 +155,37 @@ export function CityView({
                   if (el) rowRefs.current.set(i.id, el);
                   else rowRefs.current.delete(i.id);
                 }}
-                className={`border-b border-black/5 text-sm dark:border-white/10 ${
-                  selected ? "bg-black/5 dark:bg-white/10" : ""
+                className={`border-b border-line border-l-4 text-sm ${
+                  selected ? "border-l-accent bg-accent-soft" : "border-l-transparent"
                 }`}
               >
                 <button
                   onClick={() => select(i.id)}
-                  className="flex w-full gap-3 px-4 py-2 text-left hover:bg-black/5 dark:hover:bg-white/5"
+                  className="flex w-full gap-3 px-4 py-2.5 text-left hover:bg-brand-soft"
                 >
-                  <span className="w-10 tabular-nums opacity-60">
+                  <span className="w-10 font-bold tabular-nums">
                     {i.screening_rank ? `#${i.screening_rank}` : "–"}
                   </span>
                   <span className="flex-1">
-                    <span className="block">{displayName(i.name)}</span>
+                    <span className="block font-semibold">{displayName(i.name)}</span>
                     <span className="flex items-center gap-1.5 text-xs opacity-70">
                       <span
                         className="inline-block h-2 w-2 rounded-full"
                         style={{ background: FACTOR_GROUPS[g].color }}
                       />
                       {g === "none" ? "No clear factor" : factorLabel(i.main_factor)}
-                      {i.in_fix_list && " · fix list"}
+                      {i.in_fix_list && (
+                        <span className="ml-1 font-semibold text-accent-ink">on the fix list</span>
+                      )}
                     </span>
                   </span>
                   <span className="text-right">
-                    <span className="block tabular-nums">
+                    <span className="block font-bold tabular-nums">
                       {num(i.crashes_since_2022)}
                     </span>
                     {i.excess_per_year != null && i.excess_per_year >= 1 && (
-                      <span className="block text-xs tabular-nums opacity-60">
-                        +{Math.round(i.excess_per_year)}/yr
+                      <span className="block text-xs tabular-nums text-accent-ink">
+                        +{Math.round(i.excess_per_year)} a year
                       </span>
                     )}
                   </span>
@@ -186,19 +193,25 @@ export function CityView({
                 {selected && (
                   <Link
                     href={`/intersections/${i.id}`}
-                    className="block px-4 pb-2 pl-17 text-sm font-medium underline"
+                    className="mb-2 ml-17 inline-block rounded-md bg-brand px-3 py-1 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-hover"
                   >
-                    Open case file →
+                    Open case file
                   </Link>
                 )}
               </li>
             );
           })}
         </ol>
+        {filtered.length === 0 && (
+          <p className="px-4 py-6 text-sm text-muted">
+            No intersections match these filters. Lower the crash minimum or set the main factor to All.
+          </p>
+        )}
+        </div>
       </div>
-      <p className="border-t border-black/10 px-4 py-1 text-xs opacity-60 dark:border-white/15">
+      <p className="border-t border-line bg-surface px-4 py-1 text-xs opacity-60">
         Rank: network screening (crashes above what similar corners predict).
-        Crashes: dataGNV since 2022; +N/yr is the excess over similar corners.
+        Crashes: dataGNV since 2022; &ldquo;+N a year&rdquo; is the excess over similar corners.
       </p>
     </div>
   );

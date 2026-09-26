@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { API_BASE_URL, getCitySummary, getIntersection } from "@/lib/api";
-import { capitalize, displayName, num, titleCase } from "@/lib/format";
-import { StatTile } from "@/components/StatTile";
+import { capitalize, displayName, monthYear, num, titleCase } from "@/lib/format";
+import { FigureStrip } from "@/components/FigureStrip";
 import { CaseImagery } from "@/components/CaseImagery";
 import { FeatureChecklist } from "@/components/FeatureChecklist";
 import { PrintButton } from "@/components/PrintButton";
@@ -32,25 +32,31 @@ export default async function CaseFilePage(
   const distinctive = gemini ? (facts?.distinctive_crash_types ?? []) : [];
 
   return (
-    <article className="mx-auto max-w-5xl space-y-10 p-6 print:space-y-6 print:p-0">
+    <article className="mx-auto max-w-5xl space-y-5 px-6 pt-5 pb-10 print:space-y-6 print:p-0">
       <header>
-        <Link href="/" className="text-sm opacity-60 hover:underline print:hidden">
-          ← City
+        <Link href="/" className="road-link text-sm font-semibold print:hidden">
+          Back to the city map
         </Link>
-        <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm opacity-60">
-              {x.screening_rank ? `Rank #${x.screening_rank} citywide` : "Not ranked"}
-              {x.fix_list_rank && ` · #${x.fix_list_rank} on the fix list`}
+            <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+              <span className="rounded bg-brand px-2 py-0.5 text-white">
+                {x.screening_rank ? `Ranked #${x.screening_rank} citywide` : "Not ranked"}
+              </span>
+              {x.fix_list_rank && (
+                <span className="rounded bg-accent px-2 py-0.5 text-brand">
+                  #{x.fix_list_rank} on the fix list
+                </span>
+              )}
             </p>
-            <h1 className="text-3xl font-semibold">{name}</h1>
+            <h1 className="mt-2 text-4xl leading-tight font-extrabold tracking-tight">{name}</h1>
           </div>
           <div className="flex gap-2 print:hidden">
             {API_BASE_URL ? (
               <a
                 href={`/intersections/${x.id}/report`}
                 target="_blank"
-                className="rounded border border-black/15 px-3 py-1.5 text-sm font-medium hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/5"
+                className="rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
               >
                 Download report (PDF)
               </a>
@@ -59,49 +65,115 @@ export default async function CaseFilePage(
             )}
           </div>
         </div>
-        {text && <p className="mt-3 max-w-3xl text-lg">{text.verdict}</p>}
+        {text && <p className="mt-2 max-w-[65ch] text-lg">{text.verdict}</p>}
         {!cf && (
           <p className="mt-3 opacity-70">
             No case file: too few crashes to describe a pattern.
           </p>
         )}
         {gemini && x.confidence === "low" && facts && (
-          <p className="mt-3 text-sm">
-            <span className="font-medium">⚠ Low confidence:</span>{" "}
+          <p className="mt-3 max-w-3xl rounded-md border border-accent/50 bg-accent-soft px-3 py-2 text-sm text-accent-ink">
+            <span className="font-semibold">Low confidence:</span>{" "}
             {facts.confidence_reasons.join("; ")}
           </p>
         )}
       </header>
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile
-          value={num(x.crashes_since_2022)}
-          label="Crashes"
-          note={`since 2022 (dataGNV, to ${periodEnd})`}
-        />
-        <StatTile
-          value={x.crash_rate_vs_similar ? `${x.crash_rate_vs_similar.toFixed(1)}×` : "n/a"}
-          label="Crash rate vs. similar corners"
-          note={
-            facts?.crash_rate
+      <FigureStrip
+        figures={[
+          {
+            value: num(x.crashes_since_2022),
+            label: "Crashes",
+            note: `January 2022 to ${monthYear(periodEnd)} (dataGNV)`,
+          },
+          {
+            value: x.crash_rate_vs_similar ? `${x.crash_rate_vs_similar.toFixed(1)}×` : "n/a",
+            label: "Crash rate vs. similar corners",
+            note: facts?.crash_rate
               ? `${facts.crash_rate.per_million_entering_vehicles} vs. ${facts.crash_rate.similar_corners_median} per million entering vehicles`
-              : "needs traffic volume data"
-          }
-        />
-        <StatTile
-          value={x.predicted != null ? num(Math.round(x.predicted)) : "n/a"}
-          label="Predicted for a similar corner"
-          note="crashes since 2022, same traffic, signal and legs"
-        />
-        <StatTile
-          value={x.excess_per_year != null ? num(Math.round(x.excess_per_year)) : "n/a"}
-          label="Excess crashes a year"
-          note="above what similar corners have"
-        />
-      </section>
+              : "needs traffic volume data",
+          },
+          {
+            value: x.predicted != null ? num(Math.round(x.predicted)) : "n/a",
+            label: "Predicted for a similar corner",
+            note: "crashes since 2022, same traffic, signal and legs",
+          },
+          {
+            value: x.excess_per_year != null ? num(Math.round(x.excess_per_year)) : "n/a",
+            label: "Excess crashes a year",
+            note: "above what similar corners have",
+            emphasis: x.excess_per_year != null && x.excess_per_year >= 1,
+          },
+        ]}
+      />
 
-      <section>
-        <h2 className="mb-3 font-semibold">Imagery and road design</h2>
+      {gemini && (
+        <section className="grid gap-4 md:grid-cols-2 print:break-inside-avoid">
+          <div className="rounded-md border border-line border-t-4 border-t-accent bg-surface p-5">
+            <p className="text-sm font-semibold text-accent-ink">Recommended fix</p>
+            {fix ? (
+              <>
+                <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{fix.name}</h2>
+                {fixCost && <p className="text-sm opacity-60">Cost: {fixCost}</p>}
+                <ul className="mt-3 space-y-1 text-sm">
+                  {fix.effects.map((e) => (
+                    <li key={e.measure}>
+                      <span className="rounded bg-accent-soft px-1.5 py-0.5 font-semibold text-accent-ink">
+                        FHWA: {e.value}
+                      </span>{" "}
+                      {e.measure}
+                    </li>
+                  ))}
+                </ul>
+                {text?.recommended_fix && (
+                  <p className="mt-3 text-sm opacity-80">{text.recommended_fix.why}</p>
+                )}
+                {fix.note && <p className="mt-2 text-xs opacity-60">{fix.note}</p>}
+                {fix.url && (
+                  <a
+                    href={fix.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="road-link mt-3 inline-block text-sm font-semibold print:hidden"
+                  >
+                    Read the FHWA countermeasure guide
+                  </a>
+                )}
+              </>
+            ) : (
+              <p className="mt-1">Mixed pattern: no single fixable cause stands out.</p>
+            )}
+          </div>
+
+          {text?.audit_text && (
+            <div className="rounded-md border border-line border-t-4 border-t-brand bg-surface p-5">
+              <p className="text-sm font-semibold">Audit summary</p>
+              <p className="mt-2 text-sm leading-relaxed">{text.audit_text}</p>
+              <p className="mt-3 text-xs text-muted">
+                Written by Gemini from the computed facts on this page.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {gemini && facts?.gainesville_precedent && (
+        <section className="grid gap-x-8 gap-y-2 rounded-md border border-line border-l-4 border-l-good-ink bg-surface p-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] print:break-inside-avoid">
+          <div>
+            <p className="text-sm font-semibold text-good-ink">Local proof</p>
+            <h2 className="mt-1 text-xl font-extrabold tracking-tight">
+              {titleCase(facts.gainesville_precedent.intersection)}
+            </h2>
+            <p className="mt-2 rounded-md bg-good-soft px-3 py-2 text-sm font-medium text-good-ink">
+              {facts.gainesville_precedent.effect}
+            </p>
+          </div>
+          <p className="self-center text-sm opacity-80">{facts.gainesville_precedent.change}</p>
+        </section>
+      )}
+
+      <section className="!mt-10">
+        <h2 className="mb-3 text-lg font-extrabold tracking-tight">Imagery and road design</h2>
         <div className="print:hidden">
           <CaseImagery
             apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY}
@@ -116,13 +188,13 @@ export default async function CaseFilePage(
       </section>
 
       {profile && (
-        <section className="grid gap-8 md:grid-cols-2 print:break-inside-avoid">
+        <section className="!mt-10 grid gap-8 md:grid-cols-2 print:break-inside-avoid">
           <div>
-            <h2 className="font-semibold">Crashes by year</h2>
+            <h2 className="text-lg font-extrabold tracking-tight">Crashes by year</h2>
             <CrashesByYear byYear={profile.by_year} periodEnd={periodEnd} />
           </div>
           <div>
-            <h2 className="font-semibold">Crashes by hour of day</h2>
+            <h2 className="text-lg font-extrabold tracking-tight">Crashes by hour of day</h2>
             <CrashesByHour byHour={profile.by_hour} />
           </div>
           <p className="text-sm opacity-70 md:col-span-2">
@@ -136,8 +208,8 @@ export default async function CaseFilePage(
       )}
 
       {distinctive.length > 0 && (
-        <section className="print:break-inside-avoid">
-          <h2 className="font-semibold">Crash types above similar corners</h2>
+        <section className="!mt-10 print:break-inside-avoid">
+          <h2 className="text-lg font-extrabold tracking-tight">Crash types above similar corners</h2>
           <p className="text-sm opacity-60">
             {distinctive[0].period ?? "2015-2018 (FDOT)"}, the latest years with
             crash-type detail
@@ -164,66 +236,8 @@ export default async function CaseFilePage(
         </section>
       )}
 
-      {gemini && (
-        <section className="grid gap-4 md:grid-cols-2 print:break-inside-avoid">
-          <div className="rounded-lg border border-black/10 p-5 dark:border-white/15">
-            <p className="text-sm opacity-60">Recommended fix</p>
-            {fix ? (
-              <>
-                <h2 className="mt-1 text-xl font-semibold">{fix.name}</h2>
-                {fixCost && <p className="text-sm opacity-60">Cost: {fixCost}</p>}
-                <ul className="mt-3 space-y-1 text-sm">
-                  {fix.effects.map((e) => (
-                    <li key={e.measure}>
-                      <span className="font-medium">FHWA: {e.value}</span> {e.measure}
-                    </li>
-                  ))}
-                </ul>
-                {text?.recommended_fix && (
-                  <p className="mt-3 text-sm opacity-80">{text.recommended_fix.why}</p>
-                )}
-                {fix.note && <p className="mt-2 text-xs opacity-60">{fix.note}</p>}
-                {fix.url && (
-                  <a
-                    href={fix.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-block text-sm underline print:hidden"
-                  >
-                    FHWA Proven Safety Countermeasure →
-                  </a>
-                )}
-              </>
-            ) : (
-              <p className="mt-1">Mixed pattern: no single fixable cause stands out.</p>
-            )}
-          </div>
 
-          {facts?.gainesville_precedent && (
-            <div className="rounded-lg border border-black/10 p-5 dark:border-white/15">
-              <p className="text-sm opacity-60">Local proof</p>
-              <h2 className="mt-1 text-xl font-semibold">
-                {titleCase(facts.gainesville_precedent.intersection)}
-              </h2>
-              <p className="mt-3 text-sm font-medium">
-                {facts.gainesville_precedent.effect}
-              </p>
-              <p className="mt-2 text-sm opacity-80">
-                {facts.gainesville_precedent.change}
-              </p>
-            </div>
-          )}
-        </section>
-      )}
-
-      {gemini && text?.audit_text && (
-        <section className="print:break-inside-avoid">
-          <h2 className="font-semibold">Audit summary</h2>
-          <p className="mt-2 max-w-3xl text-sm opacity-80">{text.audit_text}</p>
-        </section>
-      )}
-
-      <footer className="border-t border-black/10 pt-3 text-xs opacity-60 dark:border-white/15">
+      <footer className="border-t border-line pt-3 text-xs opacity-60">
         Crashes since 2022: dataGNV. Crash types: FDOT 2015-2018. Fixes: FHWA
         Proven Safety Countermeasures. Text written by Gemini from computed
         facts only.

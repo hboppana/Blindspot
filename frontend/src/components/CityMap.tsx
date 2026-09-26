@@ -66,7 +66,7 @@ function WholeCityButton() {
           map?.panTo(GAINESVILLE);
           map?.setZoom(12);
         }}
-        className="m-2.5 rounded bg-white px-3 py-1.5 text-sm font-medium text-black shadow"
+        className="m-2.5 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white shadow transition-colors hover:bg-brand-hover"
       >
         Whole city
       </button>
@@ -127,7 +127,7 @@ function DotLayer({
       const selected = f.getId() === selectedId;
       const fixList = f.getProperty("fixList") as boolean;
       return {
-        title: `${f.getProperty("name")} · ${f.getProperty("crashes")} crashes since 2022`,
+        title: `${f.getProperty("name")}: ${f.getProperty("crashes")} crashes since 2022`,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: dotScale(f.getProperty("crashes") as number),
