@@ -115,3 +115,57 @@ body {
     background: #fff;
   }
 }
+
+/* Motion. Only transform and opacity, and only when it says something:
+   figures and conclusions arrive in reading order, rankings assemble, bars grow
+   to their value. Everything is off for people who prefer reduced motion.
+   Stagger with style={{ "--i": n }}. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+  .pop {
+    animation: pop 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 40ms + 150ms);
+  }
+  .grow-x {
+    transform-origin: left center;
+    animation: grow-x 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms + 200ms);
+  }
+
+  /* Below the fold: tie the reveal to the element scrolling into view.
+     Browsers without scroll-driven animations just show it, unanimated. */
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+    .reveal-grow {
+      transform-origin: left center;
+      animation: grow-x linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 35%;
+    }
+  }
+}

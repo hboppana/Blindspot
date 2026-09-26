@@ -16,7 +16,7 @@ export default async function FixListPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <header className="max-w-3xl">
-        <h1 className="text-[28px] leading-tight font-extrabold tracking-tight">
+        <h1 className="text-3xl leading-tight font-extrabold tracking-tight">
           Fix these {fixes.length} intersections to address {num(s.fix_list_crashes_per_year)} crashes a
           year
         </h1>
@@ -46,14 +46,14 @@ export default async function FixListPage() {
           </div>
 
           <ol>
-            {fixes.map((f) => {
+            {fixes.map((f, i) => {
               const expected = Math.max(f.crashes_per_year - f.excess_crashes_per_year, 0);
               const review = f.recommended_fix.startsWith("review needed");
               return (
-                <li key={f.id} className="border-b border-line last:border-0">
+                <li key={f.id} className="rise border-b border-line last:border-0" style={{ "--i": i } as React.CSSProperties}>
                   <Link
                     href={`/intersections/${f.id}`}
-                    className="group grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-4 px-5 py-4 hover:bg-brand-soft"
+                    className="group grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-4 px-5 py-4 transition-colors duration-150 hover:bg-brand-soft"
                   >
                     <span className="grid h-7 w-7 place-items-center rounded bg-brand text-sm font-bold text-white tabular-nums">
                       {f.rank}
@@ -69,8 +69,8 @@ export default async function FixListPage() {
                         Most common crash: {factorLabel(f.main_factor).toLowerCase()}
                       </span>
                       <span
-                        className="mt-2.5 flex h-2 gap-0.5"
-                        style={{ width: `${(f.crashes_per_year / max) * 100}%` }}
+                        className="grow-x mt-2.5 flex h-2 gap-0.5"
+                        style={{ width: `${(f.crashes_per_year / max) * 100}%`, "--i": i } as React.CSSProperties}
                         aria-hidden
                       >
                         <span className="rounded-l-full" style={{ flex: expected, background: EXPECTED }} />
@@ -93,12 +93,11 @@ export default async function FixListPage() {
           </ol>
         </section>
 
-        <aside className="self-start rounded-md border border-line bg-surface p-5 lg:sticky lg:top-6">
-          <h2 className="text-lg font-extrabold tracking-tight">By recommended fix</h2>
-          <p className="mt-0.5 text-sm text-muted">One fix type can cover several corners.</p>
-          <ol className="mt-4 space-y-4">
+        <aside style={{ "--i": 3 } as React.CSSProperties} className="rise self-start border-t border-line pt-5 lg:sticky lg:top-6 lg:border-t-0 lg:pt-0">
+          <h2 className="text-xl font-extrabold tracking-tight">By recommended fix</h2>
+          <ol className="mt-4 divide-y divide-line">
             {groups.map((g) => (
-              <li key={g.fix}>
+              <li key={g.fix} className="py-3 first:pt-0">
                 <p className="text-sm leading-snug font-semibold">{g.fix}</p>
                 <p className="mt-0.5 text-xs text-muted">
                   {g.count} {g.count === 1 ? "intersection" : "intersections"},{" "}

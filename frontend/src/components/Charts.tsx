@@ -12,6 +12,10 @@ import {
   YAxis,
 } from "recharts";
 import { capitalize } from "@/lib/format";
+import { useReducedMotion } from "@/lib/useReducedMotion";
+
+// Charts draw in once on load (the data arriving); off for reduced motion.
+const DRAW_MS = 700;
 
 const axis = {
   stroke: "var(--baseline)",
@@ -44,6 +48,7 @@ function ColumnChart({
   height?: number;
   interval?: number;
 }) {
+  const reduce = useReducedMotion();
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -57,7 +62,8 @@ function ColumnChart({
           fill="var(--series-1)"
           radius={[4, 4, 0, 0]}
           maxBarSize={24}
-          isAnimationActive={false}
+          isAnimationActive={!reduce}
+          animationDuration={DRAW_MS}
         />
       </BarChart>
     </ResponsiveContainer>
@@ -103,6 +109,7 @@ export function CrashTypesVsSimilar({
 }: {
   types: { type: string; crashes: number; expected: number }[];
 }) {
+  const reduce = useReducedMotion();
   const data = types.map((t) => ({
     type: capitalize(t.type),
     "This corner": t.crashes,
@@ -151,14 +158,16 @@ export function CrashTypesVsSimilar({
             fill="var(--series-1)"
             radius={[0, 4, 4, 0]}
             maxBarSize={16}
-            isAnimationActive={false}
+            isAnimationActive={!reduce}
+          animationDuration={DRAW_MS}
           />
           <Bar
             dataKey="Expected at similar corners"
             fill="var(--reference)"
             radius={[0, 4, 4, 0]}
             maxBarSize={16}
-            isAnimationActive={false}
+            isAnimationActive={!reduce}
+          animationDuration={DRAW_MS}
           />
         </BarChart>
       </ResponsiveContainer>
@@ -172,6 +181,7 @@ export function CityTrend({
 }: {
   months: { month: string; crashes: number }[];
 }) {
+  const reduce = useReducedMotion();
   const data = months.map((m) => ({ month: m.month, crashes: m.crashes }));
   const januaries = data.filter((d) => d.month.endsWith("-01")).map((d) => d.month);
   return (
@@ -194,7 +204,8 @@ export function CityTrend({
           strokeWidth={2}
           fill="var(--series-1)"
           fillOpacity={0.1}
-          isAnimationActive={false}
+          isAnimationActive={!reduce}
+          animationDuration={DRAW_MS}
           activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
         />
       </AreaChart>

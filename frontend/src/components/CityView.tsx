@@ -155,13 +155,13 @@ export function CityView({
                   if (el) rowRefs.current.set(i.id, el);
                   else rowRefs.current.delete(i.id);
                 }}
-                className={`border-b border-line border-l-4 text-sm ${
+                className={`border-b border-line border-l-4 text-sm transition-colors duration-200 ${
                   selected ? "border-l-accent bg-accent-soft" : "border-l-transparent"
                 }`}
               >
                 <button
                   onClick={() => select(i.id)}
-                  className="flex w-full gap-3 px-4 py-2.5 text-left hover:bg-brand-soft"
+                  className="flex w-full gap-3 px-4 py-2.5 text-left transition-colors duration-150 hover:bg-brand-soft"
                 >
                   <span className="w-10 font-bold tabular-nums">
                     {i.screening_rank ? `#${i.screening_rank}` : "-"}

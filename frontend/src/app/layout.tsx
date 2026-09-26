@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <header className="print:hidden">
           <div className="flex h-11 items-center gap-5 bg-brand px-4 text-white sm:gap-8 sm:px-6">
-            <Link href="/" className="flex items-center gap-2.5 text-[15px] font-extrabold tracking-tight">
+            <Link href="/" className="flex items-center gap-2.5 text-base font-extrabold tracking-tight">
               {/* The cross-road warning sign (MUTCD W2-1). */}
               <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6">
                 <rect x="4.5" y="4.5" width="15" height="15" rx="2" transform="rotate(45 12 12)" fill="var(--accent)" />

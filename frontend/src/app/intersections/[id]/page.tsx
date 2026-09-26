@@ -39,14 +39,10 @@ export default async function CaseFilePage(
         </Link>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-              <span className="rounded bg-brand px-2 py-0.5 text-white">
-                {x.screening_rank ? `Ranked #${x.screening_rank} citywide` : "Not ranked"}
-              </span>
+            <p className="text-sm font-semibold text-muted">
+              {x.screening_rank ? `Ranked #${x.screening_rank} citywide` : "Not ranked"}
               {x.fix_list_rank && (
-                <span className="rounded bg-accent px-2 py-0.5 text-brand">
-                  #{x.fix_list_rank} on the fix list
-                </span>
+                <span className="text-accent-ink">, #{x.fix_list_rank} on the fix list</span>
               )}
             </p>
             <h1 className="mt-2 text-4xl leading-tight font-extrabold tracking-tight">{name}</h1>
@@ -108,12 +104,12 @@ export default async function CaseFilePage(
       />
 
       {gemini && (
-        <section className="grid gap-4 md:grid-cols-2 print:break-inside-avoid">
-          <div className="rounded-md border border-line border-t-4 border-t-accent bg-surface p-5">
+        <section className="grid gap-x-10 gap-y-6 md:grid-cols-2 print:break-inside-avoid">
+          <div className="rise rounded-md border border-line bg-surface p-6" style={{ "--i": 4 } as React.CSSProperties}>
             <p className="text-sm font-semibold text-accent-ink">Recommended fix</p>
             {fix ? (
               <>
-                <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{fix.name}</h2>
+                <h2 className="mt-1 text-3xl leading-tight font-extrabold tracking-tight">{fix.name}</h2>
                 {fixCost && <p className="text-sm opacity-60">Cost: {fixCost}</p>}
                 <ul className="mt-3 space-y-1 text-sm">
                   {fix.effects.map((e) => (
@@ -146,25 +142,23 @@ export default async function CaseFilePage(
           </div>
 
           {text?.audit_text && (
-            <div className="rounded-md border border-line border-t-4 border-t-brand bg-surface p-5">
-              <p className="text-sm font-semibold">Audit summary</p>
-              <p className="mt-2 text-sm leading-relaxed">{text.audit_text}</p>
-              <p className="mt-3 text-xs text-muted">
-                Written by Gemini from the computed facts on this page.
-              </p>
+            <div className="rise md:py-6" style={{ "--i": 5 } as React.CSSProperties}>
+              <h2 className="text-xl font-extrabold tracking-tight">Audit summary</h2>
+              <p className="mt-2 max-w-[65ch] text-sm leading-relaxed">{text.audit_text}</p>
+              <p className="mt-3 text-xs text-muted">Written by Gemini from the figures on this page.</p>
             </div>
           )}
         </section>
       )}
 
       {gemini && facts?.gainesville_precedent && (
-        <section className="grid gap-x-8 gap-y-2 rounded-md border border-line border-l-4 border-l-good-ink bg-surface p-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] print:break-inside-avoid">
+        <section style={{ "--i": 6 } as React.CSSProperties} className="rise grid gap-x-8 gap-y-2 border-l-2 border-good-ink py-1 pl-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] print:break-inside-avoid">
           <div>
             <p className="text-sm font-semibold text-good-ink">Local proof</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight">
               {titleCase(facts.gainesville_precedent.intersection)}
             </h2>
-            <p className="mt-2 rounded-md bg-good-soft px-3 py-2 text-sm font-medium text-good-ink">
+            <p className="mt-2 text-sm font-semibold text-good-ink">
               {facts.gainesville_precedent.effect}
             </p>
           </div>
@@ -173,7 +167,7 @@ export default async function CaseFilePage(
       )}
 
       <section className="!mt-10">
-        <h2 className="mb-3 text-lg font-extrabold tracking-tight">Imagery and road design</h2>
+        <h2 className="mb-3 text-xl font-extrabold tracking-tight">Imagery and road design</h2>
         <div className="print:hidden">
           <CaseImagery
             apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY}
@@ -190,11 +184,11 @@ export default async function CaseFilePage(
       {profile && (
         <section className="!mt-10 grid gap-8 md:grid-cols-2 print:break-inside-avoid">
           <div>
-            <h2 className="text-lg font-extrabold tracking-tight">Crashes by year</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">Crashes by year</h2>
             <CrashesByYear byYear={profile.by_year} periodEnd={periodEnd} />
           </div>
           <div>
-            <h2 className="text-lg font-extrabold tracking-tight">Crashes by hour of day</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">Crashes by hour of day</h2>
             <CrashesByHour byHour={profile.by_hour} />
           </div>
           <p className="text-sm opacity-70 md:col-span-2">
@@ -209,7 +203,7 @@ export default async function CaseFilePage(
 
       {distinctive.length > 0 && (
         <section className="!mt-10 print:break-inside-avoid">
-          <h2 className="text-lg font-extrabold tracking-tight">Crash types above similar corners</h2>
+          <h2 className="text-xl font-extrabold tracking-tight">Crash types above similar corners</h2>
           <p className="text-sm opacity-60">
             {distinctive[0].period ?? "2015-2018 (FDOT)"}, the latest years with
             crash-type detail

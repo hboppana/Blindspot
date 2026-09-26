@@ -38,7 +38,7 @@ export default async function CityPage() {
             {
               value: num(s.fix_list_crashes_per_year),
               label: "Crashes a year at the top 10",
-              note: `${num(s.fix_list_excess_crashes_per_year)} above similar corners. Open the fix list.`,
+              note: `${num(s.fix_list_excess_crashes_per_year)} more than similar corners see`,
               emphasis: true,
               href: "/fix-list",
             },
