@@ -1,4 +1,4 @@
-"""StreetSmart API: read-only endpoints over the Tiger Data database.
+"""StreetSmart API: read-only endpoints over the Tiger Data database, plus PDF audit reports.
 
 Load the database first (python scripts/load_db.py), then from the repo root:
   uvicorn api.main:app --reload
@@ -11,11 +11,12 @@ import os
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from api.db import fetch_all, fetch_one, pool
+from api.report import build_report
 
 ORIGINS = ["http://localhost:3000"] + [
     o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()
@@ -119,9 +120,8 @@ def intersections(
     return fetch_all(sql, params)
 
 
-@app.get("/intersections/{intersection_id}")
-def intersection(intersection_id: str):
-    """Everything about one intersection: its row, its case file (or null) and the recommended countermeasures."""
+def load_intersection(intersection_id: str) -> dict:
+    """An intersection's row, its case file (or None) and its recommended countermeasures; 404 if unknown."""
     row = fetch_one("SELECT * FROM intersections WHERE id = %s", [intersection_id])
     if not row:
         raise HTTPException(404, f"no intersection {intersection_id!r}")
@@ -137,3 +137,18 @@ def intersection(intersection_id: str):
     measures = fetch_all("SELECT * FROM countermeasures WHERE id = ANY(%s)", [recommended]) if recommended else []
     order = {mid: i for i, mid in enumerate(recommended)}
     return {**row, "case_file": case, "countermeasures": sorted(measures, key=lambda m: order[m["id"]])}
+
+
+@app.get("/intersections/{intersection_id}")
+def intersection(intersection_id: str):
+    """Everything about one intersection: its row, its case file (or null) and the recommended countermeasures."""
+    return load_intersection(intersection_id)
+
+
+@app.get("/intersections/{intersection_id}/report.pdf")
+def intersection_report(intersection_id: str):
+    """The intersection's audit report as a PDF (1 to 2 pages)."""
+    x = load_intersection(intersection_id)
+    period = fetch_one("SELECT summary->>'period' AS period FROM city_summary WHERE id = 1")["period"]
+    return Response(build_report(x, period), media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="streetsmart-{intersection_id}.pdf"'})

@@ -11,6 +11,7 @@ Read-only JSON API over the Tiger Data database. Examples below are real respons
 |---|---|
 | [`GET /intersections`](#get-intersections) | Map markers and the ranked side list |
 | [`GET /intersections/{id}`](#get-intersectionsid) | The case file page |
+| [`GET /intersections/{id}/report.pdf`](#get-intersectionsidreportpdf) | Downloadable audit report |
 | [`GET /fix-list`](#get-fix-list) | "Fix these 10 intersections" |
 | [`GET /city/summary`](#get-citysummary) | Header numbers and the audit report |
 | [`GET /city/trend`](#get-citytrend) | Citywide crashes by month chart |
@@ -166,6 +167,14 @@ Every column for the intersection, plus `case_file` (null if none) and `counterm
 ```
 
 A template intersection (`has_gemini_description: false`) has `case_file.source: "template"` and a verdict like `"4 crashes since 2022. Too few crashes to identify a repeated pattern."`
+
+## GET /intersections/{id}/report.pdf
+
+The intersection's audit report as a PDF, built only from what `GET /intersections/{id}` returns. Opens inline in the browser (`Content-Disposition: inline; filename="streetsmart-{id}.pdf"`); 404 JSON for an unknown id.
+
+- **Intersections with a Gemini description (411):** 2 pages. Header (rank, fix list, evidence), verdict, key numbers, crashes by year with busiest hours and pedestrian/bike shares, contributing factors with their counts vs similar corners, recommended fix with FHWA effect, cost and local proof, road design, audit summary, sources and methods.
+- **Everything else:** 1 page. Header, key numbers, crashes by year when there is a profile, a note that there is no pattern to report, road design, sources and methods.
+- **No Google imagery** is embedded (that would redistribute it); the report gives the imagery capture dates and a Google Maps link.
 
 ## GET /fix-list
 

@@ -9,3 +9,4 @@ psycopg[binary]
 psycopg-pool
 fastapi
 uvicorn[standard]
+fpdf2
