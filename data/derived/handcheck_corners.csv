@@ -1,21 +1,21 @@
-id,name,lat,lon,crashes_window,role
-sw-34th-st-sw-archer-rd,SW 34th St & SW Archer Rd,29.626806,-82.372432,275,hotspot
-sw-40th-blvd-sw-archer-rd,SW 40th Blvd & SW Archer Rd,29.618576,-82.383387,190,hotspot
-sw-37th-blvd-sw-archer-rd,SW 37th Blvd & SW Archer Rd,29.620391,-82.380054,184,hotspot
-sw-20th-ave-sw-62nd-blvd,SW 20th Ave & SW 62nd Blvd,29.639729,-82.398252,176,hotspot
-nw-13th-st-w-university-ave,NW 13th St & W University Ave,29.652048,-82.339166,169,hotspot
-sw-34th-st-windmeadows-blvd,SW 34th St & Windmeadows Blvd,29.62832,-82.372736,145,hotspot
-nw-13th-st-nw-39th-ave,NW 13th St & NW 39th Ave,29.688364,-82.339008,143,hotspot
-sw-35th-blvd-sw-archer-rd,SW 35th Blvd & SW Archer Rd,29.623379,-82.376029,139,hotspot
-nw-13th-st-nw-23rd-ave,NW 13th St & NW 23rd Ave,29.673967,-82.33898,132,hotspot
-sw-13th-st-sw-16th-ave,SW 13th St & SW 16th Ave,29.636456,-82.339351,131,hotspot
-nw-39th-ave-nw-43rd-st,NW 39th Ave & NW 43rd St,29.688527,-82.388896,130,hotspot
-e-university-ave-ne-waldo-rd,E University Ave & NE Waldo Rd,29.651803,-82.311341,129,hotspot
-ne-23rd-ave-ne-waldo-rd,NE 23rd Ave & NE Waldo Rd,29.673747,-82.296703,40,comparison
-ne-16th-ave-ne-9th-st,NE 16th Ave & NE 9th St,29.666437,-82.314762,26,comparison
-nw-34th-st-nw-5th-ave,NW 34th St & NW 5th Ave,29.655222,-82.37225,17,comparison
-s-main-st-se-1st-ave,S Main St & SE 1st Ave,29.651068,-82.324841,12,comparison
-nw-34th-st-nw-7th-ave,NW 34th St & NW 7th Ave,29.657917,-82.372263,10,comparison
-ne-1st-st-ne-4th-ave,NE 1st St & NE 4th Ave,29.654681,-82.323839,8,comparison
-nw-13th-st-nw-26th-ave,NW 13th St & NW 26th Ave,29.7237,-82.367455,7,comparison
-se-15th-st-se-22nd-ave,SE 15th St & SE 22nd Ave,29.631254,-82.305668,5,comparison
+id,name,lat,lon,crashes_window,role,location
+sw-34th-st-sw-archer-rd,SW 34th St & SW Archer Rd,29.626842,-82.372538,275,hotspot,osm
+sw-40th-blvd-sw-archer-rd,SW 40th Blvd & SW Archer Rd,29.618684,-82.383413,190,hotspot,osm
+sw-37th-blvd-sw-archer-rd,SW 37th Blvd & SW Archer Rd,29.620564,-82.380175,184,hotspot,osm
+sw-20th-ave-sw-62nd-blvd,SW 20th Ave & SW 62nd Blvd,29.639894,-82.398266,176,hotspot,osm
+nw-13th-st-w-university-ave,NW 13th St & W University Ave,29.65209,-82.339333,169,hotspot,osm
+sw-34th-st-windmeadows-blvd,SW 34th St & Windmeadows Blvd,29.628321,-82.372571,145,hotspot,osm
+nw-13th-st-nw-39th-ave,NW 13th St & NW 39th Ave,29.688466,-82.338996,143,hotspot,osm
+sw-35th-blvd-sw-archer-rd,SW 35th Blvd & SW Archer Rd,29.623549,-82.376091,139,hotspot,osm
+nw-13th-st-nw-23rd-ave,NW 13th St & NW 23rd Ave,29.674027,-82.339011,132,hotspot,osm
+sw-13th-st-sw-16th-ave,SW 13th St & SW 16th Ave,29.636506,-82.339348,131,hotspot,osm
+nw-39th-ave-nw-43rd-st,NW 39th Ave & NW 43rd St,29.688658,-82.38899,130,hotspot,osm
+e-university-ave-ne-waldo-rd,E University Ave & NE Waldo Rd,29.651886,-82.311352,129,hotspot,osm
+ne-23rd-ave-ne-waldo-rd,NE 23rd Ave & NE Waldo Rd,29.673864,-82.296806,40,comparison,osm
+ne-16th-ave-ne-9th-st,NE 16th Ave & NE 9th St,29.666546,-82.314773,26,comparison,osm
+nw-34th-st-nw-5th-ave,NW 34th St & NW 5th Ave,29.655201,-82.372418,17,comparison,osm
+s-main-st-se-1st-ave,S Main St & SE 1st Ave,29.651047,-82.325012,12,comparison,osm
+nw-34th-st-nw-7th-ave,NW 34th St & NW 7th Ave,29.657896,-82.372412,10,comparison,osm
+ne-1st-st-ne-4th-ave,NE 1st St & NE 4th Ave,29.65468,-82.323961,8,comparison,osm
+nw-13th-st-nw-26th-ave,NW 13th St & NW 26th Ave,29.7237,-82.367455,7,comparison,dataGNV
+se-15th-st-se-22nd-ave,SE 15th St & SE 22nd Ave,29.631254,-82.305668,5,comparison,dataGNV

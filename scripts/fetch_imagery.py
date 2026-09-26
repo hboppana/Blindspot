@@ -42,6 +42,7 @@ import os
 import sys
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -99,6 +100,27 @@ def api_key():
     return key
 
 
+def osm_centres():
+    """intersection_id -> (lat, lon) of where its streets cross in OSM, for matched corners."""
+    out = {}
+    for r in csv.DictReader(open(DERIVED / "road_features_osm.csv", encoding="utf-8")):
+        if r["osm_matched"] == "True" and r["junction_lat"]:
+            out[r["intersection_id"]] = (round(float(r["junction_lat"]), 6), round(float(r["junction_lon"]), 6))
+    return out
+
+
+def all_corners():
+    """Every intersection OSM matched, busiest first, at its OSM location."""
+    centres = osm_centres()
+    rows = [r for r in csv.DictReader(open(DERIVED / "intersections.csv", encoding="utf-8"))
+            if r["intersection_id"] in centres]
+    rows.sort(key=lambda r: -int(r["crashes_window"]))
+    return [{"id": _slug(r["intersection_id"]), "name": _display(r["intersection_id"]),
+             "lat": centres[r["intersection_id"]][0], "lon": centres[r["intersection_id"]][1],
+             "crashes_window": int(r["crashes_window"]), "role": "all", "location": "osm"}
+            for r in rows]
+
+
 def pick_corners():
     """Top hotspots plus comparison corners spread across lower crash counts."""
     hotspots = json.loads((DERIVED / "hotspots.json").read_text())["hotspots"]
@@ -120,6 +142,13 @@ def pick_corners():
         chosen.append({"id": cid, "name": _display(r["intersection_id"]),
                        "lat": round(float(r["lat"]), 6), "lon": round(float(r["lon"]), 6),
                        "crashes_window": int(r["crashes_window"]), "role": "comparison"})
+
+    # Use OSM's crossing point where there is one; dataGNV's can be 20-40 m off.
+    centres = {_slug(k): v for k, v in osm_centres().items()}
+    for c in chosen:
+        c["location"] = "osm" if c["id"] in centres else "dataGNV"
+        if c["id"] in centres:
+            c["lat"], c["lon"] = centres[c["id"]]
     return chosen
 
 
@@ -163,6 +192,7 @@ def save_image(url, params, key, path):
 
 
 _OSM = None
+_PAIRS = None
 
 
 def corner_roads(corner):
@@ -178,12 +208,13 @@ def corner_roads(corner):
                 and w["tags"].get("footway") != "crossing"]
         _OSM = [(names, {street_base(n) for n in names}, pts) for names, pts in _OSM if names]
 
-    pairs = {r["intersection_id"]: r["pairs"]
-             for r in csv.DictReader(open(DERIVED / "intersections.csv", encoding="utf-8"))
-             if _slug(r["intersection_id"]) == corner["id"]}
-    if not pairs:
+    global _PAIRS
+    if _PAIRS is None:
+        _PAIRS = {_slug(r["intersection_id"]): r["pairs"]
+                  for r in csv.DictReader(open(DERIVED / "intersections.csv", encoding="utf-8"))}
+    if corner["id"] not in _PAIRS:
         return None
-    streets = {s for p in next(iter(pairs.values())).split(" | ") for s in p.split(" & ")}
+    streets = {s for p in _PAIRS[corner["id"]].split(" | ") for s in p.split(" & ")}
     routes = {s for s in streets if ROUTE_NAME.match(s)}
     bases = {street_base(s) for s in streets - routes}
 
@@ -247,6 +278,14 @@ def fetch_corner(corner, key):
     folder.mkdir(parents=True, exist_ok=True)
     meta_path = folder / "meta.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {"corner": corner}
+    old = meta["corner"]
+    moved_m = math.hypot((old["lon"] - corner["lon"]) * M_PER_DEG_LON, (old["lat"] - corner["lat"]) * M_PER_DEG_LAT)
+    if moved_m > 2:
+        # The corner's location changed (e.g. moved to the OSM crossing): start over.
+        for f in [folder / "satellite.png", *folder.glob("sv_*.jpg"), *folder.glob("gemini_*.json")]:
+            f.unlink(missing_ok=True)
+        meta = {"corner": corner}
+    meta["corner"] = corner
 
     sat = folder / "satellite.png"
     if not sat.exists():
@@ -292,27 +331,43 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--dry-run", action="store_true", help="pick corners and stop; no API calls")
     ap.add_argument("--only", help="fetch one corner by id")
+    ap.add_argument("--all", action="store_true", help="every OSM-matched intersection, busiest first")
+    ap.add_argument("--limit", type=int, help="with --all: only the first N")
+    ap.add_argument("--workers", type=int, default=4)
     args = ap.parse_args()
 
-    corners = pick_corners()
-    with open(CORNERS, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(corners[0]))
-        w.writeheader()
-        w.writerows(corners)
-    print(f"{len(corners)} hand-check corners -> {CORNERS.relative_to(ROOT)}")
-    for c in corners:
-        print(f"  {c['role']:10s} {c['crashes_window']:4d}  {c['name']}")
+    if args.all:
+        corners = all_corners()[:args.limit]
+        print(f"{len(corners)} OSM-matched intersections, busiest first")
+    else:
+        corners = pick_corners()
+        with open(CORNERS, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(corners[0]))
+            w.writeheader()
+            w.writerows(corners)
+        print(f"{len(corners)} hand-check corners -> {CORNERS.relative_to(ROOT)}")
+        for c in corners:
+            print(f"  {c['role']:10s} {c['crashes_window']:4d}  {c['location']:8s} {c['name']}")
     if args.dry_run:
         return
+    if args.only:
+        corners = [c for c in corners if c["id"] == args.only]
 
     key = api_key()
-    for c in corners:
-        if args.only and c["id"] != args.only:
-            continue
-        meta = fetch_corner(c, key)
+    corner_roads(corners[0])  # load OSM once, before the threads start
+
+    def run(c):
+        try:
+            meta = fetch_corner(c, key)
+        except Exception as e:  # one bad corner shouldn't stop a long run; rerun retries it
+            return f"{c['id']}: failed ({e})"
         dates = sorted({v.get("date") for v in meta["views"] if v.get("date")})
-        print(f"{c['id']}: {meta['view_method']}, {len(meta['views'])} Street View images, "
-              f"captured {', '.join(dates) or 'n/a'}")
+        return (f"{c['id']}: {meta['view_method']}, {len(meta['views'])} Street View images, "
+                f"captured {', '.join(dates) or 'n/a'}")
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        for n, line in enumerate(pool.map(run, corners), 1):
+            print(f"[{n}/{len(corners)}] {line}", flush=True)
 
 
 if __name__ == "__main__":

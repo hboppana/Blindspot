@@ -61,6 +61,7 @@ out body qt;
 """
 
 JUNCTION_M = 60  # our intersection point to the OSM junction node
+BOX_M = 45       # crossing nodes this close to the nearest one belong to the same junction
 NEAR_M = 50      # signals, crossings and road ways counted around the intersection
 NAME_TAGS = ("name", "alt_name", "old_name", "official_name", "ref")
 MARKED = {"marked", "zebra", "traffic_signals", "uncontrolled"}
@@ -189,18 +190,30 @@ def build(osm, inters):
         near = np.flatnonzero(dist <= JUNCTION_M)
 
         # Junction: the nearest node where ways of two of our streets meet.
-        junction, junction_d = None, None
+        # Crossings: every such node near it. Two divided roads cross at four
+        # nodes, one per carriageway pair; their midpoint is the middle of the box.
+        junction, junction_d, crossings_xy = None, None, []
         for k in near[np.argsort(dist[near])]:
             matched = set()
             for wi in node_ways[road_nodes[k]]:
                 matched |= roads[wi]["bases"] & streets
                 matched |= {"route"} if roads[wi]["names"] & routes else set()
             if len(matched) >= 2:
-                junction, junction_d = road_nodes[k], float(dist[k])
-                break
+                if junction is None:
+                    junction, junction_d = road_nodes[k], float(dist[k])
+                if np.hypot(rx[k] - crossings_xy[0][0], ry[k] - crossings_xy[0][1]) <= BOX_M if crossings_xy else True:
+                    crossings_xy.append((rx[k], ry[k]))
+        if crossings_xy:
+            cx, cy = np.mean(crossings_xy, axis=0)
+            centre_lat, centre_lon = LAT0 + cy / M_PER_DEG_LAT, LON0 + cx / M_PER_DEG_LON
 
         row = {"intersection_id": r.intersection_id, "osm_matched": junction is not None,
-               "junction_m": round(junction_d, 1) if junction_d is not None else None}
+               "junction_m": round(junction_d, 1) if junction_d is not None else None,
+               # Where the streets actually cross, per OSM. dataGNV's point can
+               # be 20-40 m off at minor corners (hand check).
+               "junction_nodes": len(crossings_xy),
+               "junction_lat": round(centre_lat, 7) if crossings_xy else None,
+               "junction_lon": round(centre_lon, 7) if crossings_xy else None}
         if junction is not None:
             close = {road_nodes[k] for k in np.flatnonzero(dist <= NEAR_M)}
             near_ways = {wi for n in close for wi in node_ways[n]}
