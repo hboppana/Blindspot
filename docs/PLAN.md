@@ -44,7 +44,7 @@ The evidence that design changes crash rates: before-and-after studies with comp
 
 ## Current state
 
-Data is done, hotspots are built, and road-feature labeling is underway.
+Data, road features, cause analysis, fixes, backtest and case files are done (workstreams 1-6). Next: database/API and the console (7-8), then ship (9). Gemini credit left: about $2 of $25.
 
 | Path | What it is |
 | --- | --- |
@@ -99,60 +99,60 @@ One Google Cloud key covers Maps JS, Static Maps and Street View Static. Gemini 
 - [x] Join FDOT 2015 to 2018 crashes at the same spot: top driver actions, collision types, lighting, speed limit, lanes, traffic volume
 - [x] Decode FDOT `_CD` fields used
 - [x] Output: `data/derived/hotspots.json`
-- [ ] Hand-check the Archer Rd & 34th St profile
+- [ ] Hand-check the Archer Rd & 34th St profile against the real corner
 
-Notes: severity since 2022 is fatalities only; injury severity comes from FDOT (2015 to 2018). Six hotspots have under 20 FDOT crashes, mostly plaza roads FDOT doesn't cover.
+Now citywide (no campus radius): 1,239 intersections with a crash since 2022. FDOT crashes linked to dataGNV by report number. Notes: severity since 2022 is fatalities only; injury severity comes from FDOT (2015 to 2018). Six hotspots have under 20 FDOT crashes, mostly plaza roads FDOT doesn't cover.
 
-### 2. Road features (in progress)
+### 2. Road features (done except bounding boxes)
 
 Goal: road-design features for every major intersection, not just hotspots (the model needs comparison corners).
 
 - [x] OSM features for every intersection (`road_features_osm.csv`)
 - [x] Imagery fetch: satellite plus Street View per leg, with capture dates
 - [x] Gemini labeler with per-corner cache and "can't tell" answers
-- [ ] Run the labeler on the 20 hand-check corners; compare against our own read and OSM
-- [ ] Label the rest if the hand check passes; otherwise OSM becomes the feature source and imagery is visual only
+- [x] Run the labeler on the 20 hand-check corners; compare against our own read and OSM (97% agreement on signals, crosswalks, left-turn lanes, medians; protected arrows, pedestrian signals, bike lanes and lane counts failed and are not used)
+- [x] Label the rest: 1,413 intersections with gemini-3.7-flash (~$16). Benchmark vs OSM: signal 92%, median 93%, left-turn lane 88%; crosswalks lower confidence at quiet corners
 - [ ] Bounding boxes for the case file: ask Gemini to return boxes for the features it reports ("no left-turn arrow", "faded crosswalk") on the demo corners
-- [ ] Output: `data/derived/road_features_gemini.csv`, merged with OSM into `road_features.csv`
+- [x] Output: `data/derived/road_features_gemini.csv`, merged with OSM and FDOT into `road_features.csv`
 
-### 3. Cause analysis
+### 3. Cause analysis (done; citywide effect sizes dropped)
 
 Goal: citywide evidence behind every contributing factor.
 
-- [ ] Fit a count model: crashes by type ~ road features, controlling for traffic volume
-- [ ] Effect sizes like "no protected left arrow: 2.3x the left-turn crashes"
-- [ ] Pattern check before using FDOT causes: compare each hotspot's 2015 to 2018 profile with 2022 to 2026 (still a hotspot, similar pedestrian/bike share, similar time pattern). Use FDOT causes only where it held
-- [ ] Check whether FDOT crash IDs match dataGNV `dhsmv_number` for 2015 to 2018; if so, link the same crashes directly
-- [ ] Per intersection: ranked factors. Name a main factor only at 50% or more; under ~40%, label it "mixed"
-- [ ] Output: factors and evidence in `hotspots.json`
+- [x] Fit a count model: crashes by type ~ road features, controlling for traffic volume
+- [ ] ~~Effect sizes like "no protected left arrow: 2.3x the left-turn crashes"~~ Dropped: feature effects vanish once traffic is controlled, and protected arrows can't be read from imagery. Replaced by network screening (HSM safety performance function + empirical Bayes, ranked by excess crashes a year) and crash rate per million entering vehicles vs similar corners
+- [x] Pattern check before using FDOT causes: compare each hotspot's 2015 to 2018 profile with 2022 to 2026 (still a hotspot, similar pedestrian/bike share, similar time pattern). Use FDOT causes only where it held (113 of 125 checked held, all of the top 20)
+- [x] Check whether FDOT crash IDs match dataGNV `dhsmv_number` for 2015 to 2018; if so, link the same crashes directly (they do: 17,596 linked)
+- [x] Per intersection: ranked factors. Name a main factor only at 50% or more; under ~40%, label it "mixed". Plus distinctive factors (crash types clearly above similar corners) tied to what the imagery shows
+- [x] Output: factors and evidence in `causes.json` (139 intersections at high confidence)
 
-### 4. Fixes
+### 4. Fixes (1 of 3 local fixes verified)
 
 Goal: every recommended fix carries evidence.
 
-- [ ] Countermeasure library: map each factor to FHWA proven countermeasures with their published crash reductions (`data/reference/countermeasures.json`)
-- [ ] Proven local fixes: corners whose crashes dropped sharply and stayed down (2011 to 2026), compared against similar corners with no drop in the same years
-- [ ] Name what changed with imagery plus Gemini; hand-verify every one used in the demo
-- [ ] Per intersection: recommended countermeasure, FHWA effect, and the closest local proof if one exists
+- [x] Countermeasure library: map each factor to FHWA proven countermeasures with their published crash reductions (`data/reference/countermeasures.json`, 17 FHWA countermeasures; protected left-turn phasing noted without a figure)
+- [x] Proven local fixes: corners whose crashes dropped sharply and stayed down (2015 to 2025; our data starts in 2015), compared against similar corners with no drop in the same years (14 candidates)
+- [ ] Name what changed; hand-verify every one used in the demo (public records so far: NW 69th Ter & W Newberry Rd verified, FDOT turn-lane/signal project 2019-20, ~45% fewer crashes; W University Ave drop not attributable; 7 candidates unchecked)
+- [x] Per intersection: recommended countermeasure, FHWA effect, and the closest local proof if one exists (`recommendations.json`)
 
 Done when: at least 3 verified local fixes, each with before and after counts against a comparison group.
 
-### 5. Backtest
+### 5. Backtest (done)
 
 Goal: proof the method works.
 
-- [ ] Run stages 1 to 3 on 2015 to 2021 data only
-- [ ] Check how many of the top 20 intersections for 2022 to 2026 it flagged
-- [ ] One headline number for the pitch: "Using only pre-2022 data, StreetSmart flagged N of today's top 20"
+- [x] Run stages 1 to 3 on 2015 to 2021 data only
+- [x] Check how many of the top 20 intersections for 2022 to 2026 it flagged: 16 of 20 (all 20 in the pre-2022 top 50)
+- [x] One headline number for the pitch: "Using only pre-2022 data, StreetSmart flagged 16 of today's top 20". Caveat: at this stage the ranking is crash counts, so this shows hotspots persist rather than that the factors predict change
 
-### 6. Case files and audit report
+### 6. Case files and audit report (done)
 
 Goal: all user-facing text, precomputed and grounded.
 
-- [ ] Gemini writes per intersection: one-line verdict, an explanation per factor, recommended fix, as structured JSON
-- [ ] Gemini writes the audit report text from the same facts
-- [ ] Prompt gets only computed facts; it may not add numbers
-- [ ] City summary numbers: intersections investigated, with repeat crashes, with a clear fixable cause; crashes a year at the top 10
+- [x] Gemini writes per intersection: one-line verdict, an explanation per factor, recommended fix, as structured JSON (411 with 5+ crashes; 828 quieter ones get a template; ~$6.60)
+- [x] Gemini writes the audit report text from the same facts
+- [x] Prompt gets only computed facts; it may not add numbers (checked automatically, plus no causal wording and fixes only from the library; ~350 older files below the top 50 may still mix 2015-18 and 2022+ counts)
+- [x] City summary numbers: intersections investigated, with repeat crashes, with a clear fixable cause; crashes a year at the top 10 (1,834 investigated, 411 repeat, 76 clear fixable pattern; top 10: 358 crashes a year, 206 above similar corners)
 
 ### 7. Database and API
 

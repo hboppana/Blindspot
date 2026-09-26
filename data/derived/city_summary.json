@@ -1,0 +1,113 @@
+{
+ "summary": {
+  "period": "2022-01-01 to 2026-07-23",
+  "intersections_investigated": 1834,
+  "with_road_design_from_imagery": 1414,
+  "with_repeat_crashes": 411,
+  "above_predicted_for_similar_corners": 241,
+  "with_clear_fixable_pattern": 76,
+  "crashes_citywide_since_2022": 19915,
+  "crashes_at_intersections_since_2022": 12247,
+  "fix_list_crashes_per_year": 358,
+  "fix_list_excess_crashes_per_year": 206,
+  "worst_intersection": "SW 34th St & SW Archer Rd",
+  "worst_crash_rate_times_similar_corners": 4.5,
+  "share_of_crashes_at_intersections_pct": 61
+ },
+ "definitions": {
+  "intersections_investigated": "every intersection with a crash history in dataGNV (2015 on)",
+  "with_road_design_from_imagery": "Gemini read signals, crosswalks, left-turn lanes and medians from satellite and Street View imagery",
+  "with_repeat_crashes": ">= 5 crashes since 2022",
+  "above_predicted_for_similar_corners": "network screening (safety performance function + empirical Bayes): expected crashes above what a corner with the same traffic/road class, signal and legs would have",
+  "with_clear_fixable_pattern": "high-confidence crash-type data, a crash type clearly above similar corners, and an FHWA Proven Safety Countermeasure that fits the corner",
+  "crashes_at_intersections_since_2022": "crashes at an intersection or within 150 ft of it",
+  "fix_list": "top 10 by screening rank; crashes and excess per year over 4.6 years"
+ },
+ "fix_list": [
+  {
+   "id": "sw-34th-st-sw-archer-rd",
+   "name": "SW 34th St & SW Archer Rd",
+   "rank": 1,
+   "crashes_per_year": 60,
+   "excess_crashes_per_year": 36,
+   "recommended_fix": "Dedicated right-turn lanes"
+  },
+  {
+   "id": "sw-40th-blvd-sw-archer-rd",
+   "name": "SW 40th Blvd & SW Archer Rd",
+   "rank": 2,
+   "crashes_per_year": 42,
+   "excess_crashes_per_year": 25,
+   "recommended_fix": "Appropriate yellow change intervals"
+  },
+  {
+   "id": "sw-20th-ave-sw-62nd-blvd",
+   "name": "SW 20th Ave & SW 62nd Blvd",
+   "rank": 3,
+   "crashes_per_year": 39,
+   "excess_crashes_per_year": 23,
+   "recommended_fix": "Appropriate yellow change intervals"
+  },
+  {
+   "id": "nw-13th-st-w-university-ave",
+   "name": "NW 13th St & W University Ave",
+   "rank": 4,
+   "crashes_per_year": 37,
+   "excess_crashes_per_year": 21,
+   "recommended_fix": "Appropriate yellow change intervals"
+  },
+  {
+   "id": "nw-13th-st-nw-39th-ave",
+   "name": "NW 13th St & NW 39th Ave",
+   "rank": 5,
+   "crashes_per_year": 31,
+   "excess_crashes_per_year": 19,
+   "recommended_fix": "Appropriate yellow change intervals"
+  },
+  {
+   "id": "sw-13th-st-sw-16th-ave",
+   "name": "SW 13th St & SW 16th Ave",
+   "rank": 6,
+   "crashes_per_year": 29,
+   "excess_crashes_per_year": 18,
+   "recommended_fix": "Appropriate yellow change intervals"
+  },
+  {
+   "id": "sw-34th-st-windmeadows-blvd",
+   "name": "SW 34th St & Windmeadows Blvd",
+   "rank": 7,
+   "crashes_per_year": 32,
+   "excess_crashes_per_year": 17,
+   "recommended_fix": "review needed (no single FHWA countermeasure fits)"
+  },
+  {
+   "id": "e-university-ave-ne-waldo-rd",
+   "name": "E University Ave & NE Waldo Rd",
+   "rank": 8,
+   "crashes_per_year": 28,
+   "excess_crashes_per_year": 16,
+   "recommended_fix": "Corridor access management (fewer driveways)"
+  },
+  {
+   "id": "sw-37th-blvd-sw-archer-rd",
+   "name": "SW 37th Blvd & SW Archer Rd",
+   "rank": 9,
+   "crashes_per_year": 40,
+   "excess_crashes_per_year": 16,
+   "recommended_fix": "Corridor access management (fewer driveways)"
+  },
+  {
+   "id": "sw-23rd-dr-sw-archer-rd",
+   "name": "SW 23rd Dr & SW Archer Rd",
+   "rank": 10,
+   "crashes_per_year": 20,
+   "excess_crashes_per_year": 15,
+   "recommended_fix": "Appropriate yellow change intervals"
+  }
+ ],
+ "audit_report": {
+  "text": "From January 1, 2022 to July 23, 2026, 12,247 of the 19,915 crashes citywide occurred at intersections, accounting for 61 percent of all crashes in Gainesville. An investigation of 1,834 intersections, including 1,414 with road design from imagery, identified 411 with repeat crashes and 241 above predicted for similar corners. Furthermore, 76 intersections have a clear fixable pattern. Locations on the fix list account for 358 crashes per year and 206 excess crashes per year. The worst intersection, SW 34th St & SW Archer Rd, exhibits 4.5 times the crash rate of similar intersections, with 60 crashes per year and 36 excess crashes per year. The recommended fix for this site is Dedicated right-turn lanes, followed on the fix list by SW 40th Blvd & SW Archer Rd with 42 crashes per year and 25 excess crashes per year.",
+  "problems": null,
+  "model": "gemini-3.7-flash"
+ }
+}

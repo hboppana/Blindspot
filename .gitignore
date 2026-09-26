@@ -10,3 +10,6 @@ data/imagery/
 
 # OSM download (20 MB); scripts/osm_features.py re-fetches it
 data/raw/osm_gainesville.json
+
+# Per-intersection generation caches (derived outputs are committed instead)
+data/cache/
