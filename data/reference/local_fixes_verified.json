@@ -1,0 +1,28 @@
+{
+  "_note": "Leads from scripts/local_fixes.py checked against public records. 'verified' means a documented change at that corner whose timing matches the drop; the crash numbers are from local_fix_candidates.csv. Still to do before the demo: hand-check imagery and confirm the NW 69th Ter turn-lane detail with FDOT project documents.",
+  "findings": [
+    {
+      "intersection_id": "NW 69TH TER & W NEWBERRY RD",
+      "status": "verified_timing",
+      "change": "FDOT Newberry Road project: extended turn lanes on SR 26 (Newberry Rd), widened the I-75 Exit 387 ramps, new traffic signals and street lighting. Construction September 2019 to spring 2020. Satellite imagery shows dual eastbound left-turn lanes at NW 69th Ter.",
+      "crashes_per_year": {"2015": 35, "2016": 41, "2017": 35, "2018": 43, "2019": 38, "2020": 27, "2021": 19, "2022": 15, "2023": 17, "2024": 9, "2025": 15},
+      "effect": "about 45% fewer crashes in 2021-2025 than 2015-2019 after adjusting for the citywide drop (similar-size corners: 0.52x relative change, p = 2e-07)",
+      "caveats": "The project's stated aim was congestion, not safety. The I-75 ramp work nearby could also change how crashes are named or located. Regression to the mean is limited by 5 steady years before (35-43 a year).",
+      "sources": [
+        "https://www.wcjb.com/content/news/FDOT-to-begin-Newberry-Road-construction-in-September-542900631.html"
+      ]
+    },
+    {
+      "intersection_id": "W UNIVERSITY AVE corridor (NW 18th St, NW 19th St, NW 22nd St, NW 12th St, SW 2nd Ave, SW 23rd St)",
+      "status": "not_attributable",
+      "change": "FDOT/UF pedestrian safety package in 2021: 25 mph limit from just east of NW 21st Terrace to NW 13th St (announced May 2021), crosswalk enhancements, signal retiming, temporary speed tables; new signals at NW 16th and NW 19th St from August 2021; one-way pattern at NW 17th/18th St; raised crosswalks and lighting from 2023.",
+      "effect": "The whole corridor fell relative to the city: the 25 mph section 27% fewer crashes (2022-25 vs 2015-19), but the stretch west of it (NW 22nd-40th St), which got no speed reduction, fell 34%. The 25 mph section was already declining in 2015-2019, and the NW 18th/19th St drops start in 2017-2018, before the package.",
+      "caveats": "Do not present as a proven fix. UF's remote classes in 2020-21 and other corridor changes are not controlled for.",
+      "sources": [
+        "https://www.wuft.org/news/2021/05/25/florida-department-of-transportation-lowers-speed-limit-on-west-university-avenue/",
+        "https://www.wcjb.com/2021/02/04/fdot-completes-pedestrian-safety-improvements-along-university-avenue/",
+        "https://businessaffairs.ufl.edu/news/university-avenue-roadway-improvements-to-address-pedestrian-safety/"
+      ]
+    }
+  ]
+}
