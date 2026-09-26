@@ -15,6 +15,7 @@ Rules, in order:
   3. Standardize directions (WEST -> W), suffixes (ROAD -> RD, AV -> AVE),
      ordinals ("SE 10 AVE" -> "SE 10TH AVE") and a few known typos.
   4. Directions are kept: NW 8TH AVE and SW 8TH AVE are different streets.
+     FDOT puts them last ("35TH BLVD SW"); they move to the front.
      A name with no direction ("ARCHER RD") stays as is; the coordinate
      merge joins it to "SW ARCHER RD".
   5. Look-alikes stay separate: SW 34TH TER is not SW 34TH ST, and
@@ -85,10 +86,17 @@ def _clean_piece(piece):
     if words[0] in DIRECTIONS:
         words[0] = DIRECTIONS[words[0]]
     words = [SUFFIXES.get(w, w) for w in words]
-    # Stray direction after the suffix: "W UNIVERSITY AV E". Gainesville
-    # puts directions first, so a trailing one is noise.
-    if len(words) > 2 and words[-1] in DIRECTIONS.values() and words[-2] in SUFFIX_SET:
+    # FDOT sometimes adds a side-of-road marker: "40TH BLVD SW L", "62ND ST NW R".
+    if len(words) > 2 and words[-1] in {"L", "R"} and (
+            words[-2] in DIRECTIONS.values() or words[-2] in SUFFIX_SET):
         words.pop()
+    # Direction after the suffix. FDOT writes "35TH BLVD SW" for SW 35TH BLVD,
+    # so move it to the front. If there is already one in front
+    # ("W UNIVERSITY AV E"), the trailing one is noise.
+    if len(words) > 2 and words[-1] in DIRECTIONS.values() and words[-2] in SUFFIX_SET:
+        trailing = words.pop()
+        if words[0] not in DIRECTIONS.values():
+            words.insert(0, trailing)
     # "SE 10 AVE" -> "SE 10TH AVE"
     for i in range(len(words) - 1):
         if words[i].isdigit() and words[i + 1] in SUFFIX_SET:
@@ -121,6 +129,15 @@ def normalize_street(name):
         return None
     best = _clean_piece(best)
     return best or None
+
+
+ROUTE_NAME = re.compile(r"^(SR|US|CR|FL) \d+$")  # what normalize_street returns for a bare route
+
+
+def street_base(street):
+    """Street name without its direction: "SW ARCHER RD" -> "ARCHER RD"."""
+    words = street.split()
+    return " ".join(words[1:]) if len(words) > 1 and words[0] in DIRECTIONS.values() else street
 
 
 def pair_key(a, b):

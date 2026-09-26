@@ -24,21 +24,40 @@ Step 3: snap crashes with no pair key (no cross street, or one that isn't a
   snapped: dataGNV puts them on the reference corner whatever the offset, so
   distance can't vouch for them.
 
+Step 4: attach FDOT crashes (see fdot.py), profile each intersection, and
+  write the outputs:
+    data/derived/intersections.csv  every intersection, with counts (the
+                                    comparison corners for workstreams 2-3)
+    data/derived/hotspots.json      the top TOP_N within CAMPUS_KM of campus,
+                                    ranked by crashes since SINCE_YEAR, each
+                                    with a dataGNV profile and FDOT causes
+
 Requires: pip install pandas numpy
 Usage:    python scripts/build_hotspots.py
 """
 
+import json
 import re
+from datetime import date
 from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from streets import normalize_street, pair_key
+from fdot import FLAGS, load_fdot, snap_fdot
+from streets import ROUTE_NAME, normalize_street, pair_key, street_base
 
 ROOT = Path(__file__).resolve().parent.parent
 CRASHES = ROOT / "data" / "processed" / "gnv_crashes_clean.csv"
+DERIVED = ROOT / "data" / "derived"
+
+SINCE_YEAR = 2022  # crashes dropped ~30% in 2020; current hotspots use 2022 onward
+CAMPUS = (29.6488, -82.3431)  # Century Tower, centre of the UF campus
+CAMPUS_KM = 6  # reaches the SW student-housing corridor: Archer to Butler Plaza, SW 20th Ave & 62nd Blvd
+TOP_N = 50
+UNCODED = {"NOT CODED", "UNKNOWN", "UNKNOWN/NOT CODED", "NaN"}
+WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 NEAR_FT = 150  # about 45 m
 MAX_MILES = 2
@@ -50,7 +69,6 @@ SNAP_M = 40
 LAT0, LON0 = 29.65, -82.35
 M_PER_DEG_LAT = 110_860
 M_PER_DEG_LON = 111_320 * np.cos(np.radians(LAT0))
-ROUTE_NAME = re.compile(r"^(SR|US|CR|FL) \d+$")
 
 
 def parse_offset_ft(text):
@@ -85,17 +103,11 @@ def load_intersection_crashes():
     return d
 
 
-def _base(street):
-    """Street name without its direction: "SW ARCHER RD" -> "ARCHER RD"."""
-    words = street.split()
-    return " ".join(words[1:]) if words[0] in {"N", "S", "E", "W", "NW", "NE", "SW", "SE"} else street
-
-
 def _can_merge(pair_a, pair_b):
     a, b = pair_a.split(" & "), pair_b.split(" & ")
     if any(ROUTE_NAME.match(s) for s in a + b):
         return True
-    return bool({_base(s) for s in a} & {_base(s) for s in b})
+    return bool({street_base(s) for s in a} & {street_base(s) for s in b})
 
 
 def _median_location(crashes):
@@ -154,6 +166,36 @@ def merge_pairs(d):
     return inters.sort_values("crashes_2022_on", ascending=False).reset_index(drop=True)
 
 
+def nearest_intersection(lat, lon, inters):
+    """Row position of the nearest intersection for each point, and the distance in metres."""
+    ix = (inters.lon.to_numpy() - LON0) * M_PER_DEG_LON
+    iy = (inters.lat.to_numpy() - LAT0) * M_PER_DEG_LAT
+    cx = (np.asarray(lon, dtype=float) - LON0) * M_PER_DEG_LON
+    cy = (np.asarray(lat, dtype=float) - LAT0) * M_PER_DEG_LAT
+    nearest = np.empty(len(cx), dtype=int)
+    dist = np.empty(len(cx))
+    for k in range(0, len(cx), 2000):  # chunked so the distance matrix stays small
+        dm = np.hypot(cx[k:k + 2000, None] - ix[None], cy[k:k + 2000, None] - iy[None])
+        nearest[k:k + 2000] = dm.argmin(axis=1)
+        dist[k:k + 2000] = dm.min(axis=1)
+    return nearest, dist
+
+
+def intersections_within(lat, lon, inters, radius_m):
+    """For each point, row positions of intersections within radius_m, nearest first."""
+    ix = (inters.lon.to_numpy() - LON0) * M_PER_DEG_LON
+    iy = (inters.lat.to_numpy() - LAT0) * M_PER_DEG_LAT
+    cx = (np.asarray(lon, dtype=float) - LON0) * M_PER_DEG_LON
+    cy = (np.asarray(lat, dtype=float) - LAT0) * M_PER_DEG_LAT
+    out = []
+    for k in range(0, len(cx), 2000):
+        dm = np.hypot(cx[k:k + 2000, None] - ix[None], cy[k:k + 2000, None] - iy[None])
+        for row in dm:
+            hits = np.flatnonzero(row <= radius_m)
+            out.append(hits[np.argsort(row[hits])])
+    return out
+
+
 def snap_leftovers(d, inters):
     """Attach crashes with no pair key to the nearest intersection within SNAP_M.
 
@@ -165,18 +207,7 @@ def snap_leftovers(d, inters):
     busy corners (3970 SW Archer Rd), which reads as driveway crashes.
     """
     cand = d.index[d.pair.isna()]
-    ix = (inters.lon.to_numpy() - LON0) * M_PER_DEG_LON
-    iy = (inters.lat.to_numpy() - LAT0) * M_PER_DEG_LAT
-    cx = (d.loc[cand, "longitude"].to_numpy() - LON0) * M_PER_DEG_LON
-    cy = (d.loc[cand, "latitude"].to_numpy() - LAT0) * M_PER_DEG_LAT
-
-    nearest = np.empty(len(cand), dtype=int)
-    dist = np.empty(len(cand))
-    for k in range(0, len(cand), 2000):  # chunked so the distance matrix stays small
-        dm = np.hypot(cx[k:k + 2000, None] - ix[None], cy[k:k + 2000, None] - iy[None])
-        nearest[k:k + 2000] = dm.argmin(axis=1)
-        dist[k:k + 2000] = dm.min(axis=1)
-
+    nearest, dist = nearest_intersection(d.loc[cand, "latitude"], d.loc[cand, "longitude"], inters)
     ids = inters.intersection_id.to_numpy()
     at = d.loc[cand, "at_intersection"].to_numpy() == 1
     keep = at & (dist <= SNAP_M)
@@ -194,6 +225,81 @@ def snap_leftovers(d, inters):
         counted[counted.snapped & (counted.year >= 2022)].groupby("intersection_id").size()
     ).fillna(0).astype(int)
     return inters.sort_values("crashes_2022_on", ascending=False).reset_index(drop=True)
+
+
+def _distance_km(lat, lon, point):
+    return np.hypot((np.asarray(lon) - point[1]) * M_PER_DEG_LON,
+                    (np.asarray(lat) - point[0]) * M_PER_DEG_LAT) / 1000
+
+
+def _display(name):
+    """"SW 34TH ST & SW ARCHER RD" -> "SW 34th St & SW Archer Rd"."""
+    keep = {"N", "S", "E", "W", "NW", "NE", "SW", "SE", "SR", "US", "CR", "FL", "&"}
+    return " ".join(w if w in keep else w.lower() if w[0].isdigit() else w.capitalize()
+                    for w in name.split())
+
+
+def _slug(name):
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def _shares(values, top=None):
+    """Counts and shares of coded values, most common first. Uncoded values are left out."""
+    v = pd.Series(values).dropna()
+    v = v[~v.isin(UNCODED)]
+    counts = v.value_counts()
+    if top:
+        counts = counts.head(top)
+    return {"coded": int(len(v)),
+            "values": [{"label": k, "count": int(c), "share": round(c / len(v), 3)} for k, c in counts.items()]}
+
+
+def gnv_profile(g):
+    """Profile of an intersection's dataGNV crashes (pass only the years you want)."""
+    hours = g.hour.value_counts()
+    return {
+        "crashes": int(len(g)),
+        "by_year": {int(y): int(c) for y, c in g.year.value_counts().sort_index().items()},
+        "pedestrian_share": round(g.involves_pedestrian.mean(), 3),
+        "bicycle_share": round(g.involves_bicycle.mean(), 3),
+        "moped_share": round((g.mopeds > 0).mean(), 3),
+        "motorcycle_share": round((g.motorcycles > 0).mean(), 3),
+        "fatal_crashes": int((g.fatalities > 0).sum()),
+        "fatalities": int(g.fatalities.sum()),
+        "coded_at_intersection_share": round(g.at_intersection.mean(), 3),
+        "intersection_type": _shares(g.intersection_type.where(g.at_intersection == 1), top=3),
+        "by_hour": [int(hours.get(h, 0)) for h in range(24)],
+        "by_weekday": {day: int((g.day_of_week == day).sum()) for day in WEEKDAYS},
+    }
+
+
+def _road_context(h):
+    """Speed limit, lanes and traffic volume per road, from FDOT (medians over its crashes)."""
+    out = []
+    for road, r in h.dropna(subset=["on_norm"]).groupby("on_norm"):
+        if r.AVERAGE_DAILY_TRAFFIC.notna().sum() == 0 and r.SPEED_LIMIT.notna().sum() == 0:
+            continue
+        med = lambda s: None if s.notna().sum() == 0 else float(s.median())
+        out.append({"road": road, "crashes": int(len(r)), "speed_limit": med(r.SPEED_LIMIT),
+                    "lanes": med(r.CNTOFLANES), "daily_traffic": med(r.AVERAGE_DAILY_TRAFFIC)})
+    return sorted(out, key=lambda x: -x["crashes"])[:2]
+
+
+def fdot_profile(h):
+    """Profile of an intersection's FDOT crashes: how they happen."""
+    return {
+        "crashes": int(len(h)),
+        "years": {int(y): int(c) for y, c in h.CALENDAR_YEAR.value_counts().sort_index().items()},
+        "driver_actions": _shares(h.D1_FRST_DR_ACTN_CD_TXT, top=8),
+        "collision_types": _shares(h.collision_type, top=8),
+        "vehicle_movements": _shares(h.vehicle_movement, top=8),
+        "lighting": _shares(h.lighting),
+        "injury_severity": _shares(h.injury_severity),
+        "traffic_control": _shares(h.V1TRAFCTL_TXT, top=5),
+        "road_surface": _shares(h.road_surface, top=4),
+        "flags": {name: round(h[name].mean(), 3) for name in FLAGS.values()},
+        "roads": _road_context(h),
+    }
 
 
 if __name__ == "__main__":
@@ -223,6 +329,57 @@ if __name__ == "__main__":
           f"coded at an intersection")
     print(f"crashes on an intersection: {d.intersection_id.notna().sum()} of {len(d)}")
 
-    print("\nTop 20 intersections, 2022 onward (snapped crashes in brackets):")
-    for _, r in inters.head(20).iterrows():
-        print(f"{r.crashes_2022_on:5d}  ({r.snapped_2022_on:3d})  {r.intersection_id}")
+    # FDOT join
+    f = snap_fdot(load_fdot(), inters, intersections_within, SNAP_M)
+    near = f.near_corner
+    driveway = near & (f.JCT_CD == 4)
+    i75 = near & ~driveway & (f.on_norm.isna() | (f.on_norm == "SR 93"))
+    print(f"\nFDOT: {len(f)} crashes after dropping duplicates; {near.sum()} within {SNAP_M} m of an "
+          f"intersection, {f.intersection_id.notna().sum()} attached")
+    print(f"  left out near a corner: driveway {driveway.sum()}, I-75 or no road {i75.sum()}, "
+          f"no street in common {(near & ~driveway & ~i75 & f.intersection_id.isna()).sum()}")
+    inters["fdot_crashes"] = inters.intersection_id.map(f.intersection_id.value_counts()).fillna(0).astype(int)
+
+    # Hotspots: the busiest intersections near campus since SINCE_YEAR.
+    inters["campus_km"] = _distance_km(inters.lat, inters.lon, CAMPUS).round(2)
+    DERIVED.mkdir(parents=True, exist_ok=True)
+    inters.assign(pairs=inters.pairs.map(" | ".join)).to_csv(DERIVED / "intersections.csv", index=False)
+
+    top = inters[inters.campus_km <= CAMPUS_KM].head(TOP_N)
+    recent = d[d.intersection_id.notna() & (d.year >= SINCE_YEAR)]
+    hotspots = []
+    for rank, r in enumerate(top.itertuples(), 1):
+        hotspots.append({
+            "id": _slug(r.intersection_id),
+            "rank": rank,
+            "name": _display(r.intersection_id),
+            "lat": round(r.lat, 6), "lon": round(r.lon, 6),
+            "campus_km": r.campus_km,
+            "merged_names": r.pairs,
+            "crashes_all_years": int(r.crashes),
+            "crashes": gnv_profile(recent[recent.intersection_id == r.intersection_id]),
+            "causes_fdot": fdot_profile(f[f.intersection_id == r.intersection_id]),
+        })
+
+    out = {
+        "generated": str(date.today()),
+        "definitions": {
+            "crashes": f"dataGNV crashes {SINCE_YEAR} to {d.crash_date.max()}, at the intersection "
+                       f"or within {NEAR_FT} ft of it",
+            "causes_fdot": f"FDOT crashes 2015 to 2019 (mostly 2015 to 2018) within {SNAP_M} m, "
+                           "excluding driveway-related and I-75",
+            "hotspots": f"top {TOP_N} intersections by crashes since {SINCE_YEAR}, within "
+                        f"{CAMPUS_KM} km of campus centre {CAMPUS}",
+            "shares": "share of coded values; NOT CODED / UNKNOWN left out",
+            "roads": "FDOT road context per road at the corner, medians over its crashes",
+        },
+        "hotspots": hotspots,
+    }
+    (DERIVED / "hotspots.json").write_text(json.dumps(out, indent=2))
+    print(f"\nwrote {len(inters)} intersections to data/derived/intersections.csv")
+    print(f"wrote {len(hotspots)} hotspots to data/derived/hotspots.json")
+
+    print(f"\nHotspots within {CAMPUS_KM} km of campus (crashes since {SINCE_YEAR} / FDOT crashes):")
+    for h in hotspots[:15]:
+        print(f"{h['rank']:3d}. {h['crashes']['crashes']:4d} / {h['causes_fdot']['crashes']:4d}  "
+              f"{h['campus_km']:.1f} km  {h['name']}")

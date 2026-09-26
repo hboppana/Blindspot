@@ -1,0 +1,174 @@
+{
+  "source": "https://gis.fdot.gov/arcgis/rest/services/sso/ssogis/MapServer/2024",
+  "note": "Coded-value domains from the FDOT Crashes (2024) layer. The 2015-2019 Alachua extract uses the same Florida crash report codes; every code in it appears here. Some labels are truncated at 30 characters in the source.",
+  "fields": {
+    "JCT_CD": {
+      "label": "Relation to Junction",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "NON-JUNCTION",
+        "2": "INTERSECTION",
+        "3": "INTERSECTION-RELATED",
+        "4": "DRIVEWAY/ALLEY ACCESS RELATED",
+        "5": "RAILWAY GRADE CROSSING",
+        "14": "ENTRANCE/EXIT RAMP",
+        "15": "CROSSOVER-RELATED",
+        "16": "SHARED-USE PATH OR TRAIL",
+        "17": "ACCELERATION/DECELERATION LANE",
+        "18": "THROUGH ROADWAY",
+        "77": "OTHER (SEE NARRATIVE)",
+        "88": "UNKNOWN"
+      }
+    },
+    "INTCT_TYP_CD": {
+      "label": "Intersection Type",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "NOT AT INTERSECTION",
+        "2": "FOUR-WAY INTERSECTION",
+        "3": "T-INTERSECTION",
+        "4": "Y-INTERSECTION",
+        "5": "TRAFFIC CIRCLE",
+        "6": "ROUNDABOUT",
+        "7": "FIVE-POINT, OR MORE",
+        "77": "OTHER (SEE NARRATIVE)"
+      }
+    },
+    "INJSEVER": {
+      "label": "Highest Injury in Crash",
+      "codes": {
+        "0": "UNKNOWN/NOT CODED",
+        "1": "NO INJURY",
+        "2": "POSSIBLE INJURY",
+        "3": "NO-INCAPACITATING INJURY",
+        "4": "INCAPACITATING INJURY",
+        "5": "FATAL(WITHIN 30 DAYS) INJURY",
+        "6": "NON-TRAFFIC FATALITY"
+      }
+    },
+    "LGHT_COND_CD": {
+      "label": "Lighting",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "DAYLIGHT",
+        "2": "DUSK",
+        "3": "DAWN",
+        "4": "DARK-LIGHTED",
+        "5": "DARK-NOT LIGHTED",
+        "6": "DARK-UNKNOWN LIGHTING",
+        "77": "OTHER (EXPLAIN IN NARRATIVE)",
+        "88": "UNKNOWN"
+      }
+    },
+    "EVNT_WTHR_COND_CD": {
+      "label": "Weather",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "CLEAR",
+        "2": "CLOUDY",
+        "3": "RAIN",
+        "4": "FOG, SMOG, SMOKE",
+        "5": "SLEET, HAIL, FREEZING RAIN",
+        "6": "BLOWING SAND, SOIL, DIRT",
+        "7": "SEVERE CROSSWINDS",
+        "77": "OTHER (SEE NARRATIVE)"
+      }
+    },
+    "RD_SRFC_COND_CD": {
+      "label": "Road Surface",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "DRY",
+        "2": "WET",
+        "4": "ICE/FROST",
+        "5": "OIL",
+        "6": "MUD, DIRT, GRAVEL",
+        "7": "SAND",
+        "8": "WATER (STANDING/MOVING)",
+        "77": "OTHER EXPLAIN IN NARRATIVE",
+        "88": "UNKNOWN"
+      }
+    },
+    "MOST_HARM_EVNT_CD": {
+      "label": "Crash Harmful Event",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "OVERTURN/ROLLOVER",
+        "2": "FIRE/EXPLOSION",
+        "3": "IMMERSION",
+        "4": "JACKKNIFE",
+        "5": "CARGO/EQUIPMENT LOSS OR SHIFT",
+        "6": "FELL/JUMPED FROM MOTOR VEHICLE",
+        "7": "THROWN OR FALLING OBJECT",
+        "8": "RAN INTO WATER/CANAL",
+        "9": "OTHER NON-COLLISION",
+        "10": "PEDESTRIAN",
+        "11": "PEDALCYCLE",
+        "12": "RAILWAY VEHICLE (TRAIN, ENGINE",
+        "13": "ANIMAL",
+        "14": "MOTOR VEHICLE IN TRANSPORT",
+        "15": "PARKED MOTOR VEHICLE",
+        "16": "WORK ZONE/MAINTENANCE EQUIPMEN",
+        "17": "STRUCK BY FALLING, SHIFTING CA",
+        "18": "OTHER NON-FIXED OBJECT",
+        "19": "IMPACT ATTENUATOR/CRASH CUSION",
+        "20": "BRIDGE OVERHEAD STRUCTURE",
+        "21": "BRIDGE PIER OR SUPPORT",
+        "22": "BRIDGE RAIL",
+        "23": "CULVERT",
+        "24": "CURB",
+        "25": "DITCH",
+        "26": "EMBANKMENT",
+        "27": "GUARDRAIL FACE",
+        "28": "GUARDRAIL END",
+        "29": "CABLE BARRIER",
+        "30": "CONCRETE TRAFFIC BARRIER",
+        "31": "OTHER TRAFFIC BARRIER",
+        "32": "TREE (STANDING)",
+        "33": "UTILITY POLE/LIGHT SUPPORT",
+        "34": "TRAFFIC SIGN SUPPORT",
+        "35": "TRAFFIC SIGNAL SUPPORT",
+        "36": "OTHER POST, POLE, OR SUPPORT",
+        "37": "FENCE",
+        "38": "MAILBOX",
+        "39": "OTHER FIXED OBJECT (WALL, BUIL"
+      }
+    },
+    "IMPCT_TYP_CD": {
+      "label": "Manner of Collision",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "FRONT TO REAR",
+        "2": "FRONT TO FRONT",
+        "3": "ANGLE",
+        "4": "SIDESWIPE, SAME DIRECTION",
+        "5": "SIDESWIPE, OPPOSITE DIRECTION",
+        "6": "REAR TO SIDE",
+        "7": "REAR TO REAR",
+        "77": "OTHER (SEE NARRATIVE)",
+        "88": "UNKNOWN"
+      }
+    },
+    "VHCL_MOVE_CD": {
+      "label": "Vehicle Movement",
+      "codes": {
+        "0": "NOT CODED",
+        "1": "STRAIGHT AHEAD",
+        "3": "TURNING LEFT",
+        "4": "BACKING",
+        "5": "TURNING RIGHT",
+        "6": "CHANGING LANES",
+        "8": "PARKED",
+        "10": "MAKING U-TURN",
+        "11": "OVERTAKING/PASSING",
+        "13": "STOPPED IN TRAFFIC",
+        "14": "SLOWING",
+        "15": "NEGOTIATING A CURVE",
+        "16": "LEAVING TRAFFIC LANE",
+        "17": "ENTERING TRAFFIC LANE",
+        "77": "OTHER (SEE NARRATIVE)",
+        "88": "UNKNOWN"
+      }
+    }
+  }
+}
