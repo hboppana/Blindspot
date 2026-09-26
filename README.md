@@ -2,6 +2,8 @@
 
 Blindspot checks your route for dangerous intersections and explains why each one is dangerous. It uses Gemini to label road design from street imagery and runs statistics on crash data to find the causes, along with the fixes that have already worked.
 
+See [docs/PLAN.md](docs/PLAN.md) for the build plan.
+
 ## Data
 
 **Use the files in `data/processed/`.** `data/raw/` holds the untouched downloads.
