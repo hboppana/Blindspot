@@ -14,7 +14,8 @@ const API_BASE_URL = process.env.API_BASE_URL;
 
 async function get<T>(path: string): Promise<T | null> {
   if (API_BASE_URL) {
-    const res = await fetch(`${API_BASE_URL}${path}`);
+    // no-store: render per request, so pages track the live database.
+    const res = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store" });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
     return res.json();

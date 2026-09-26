@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+/* Chart tokens: first three slots of the dataviz reference palette
+   (validated all-pairs for CVD in both modes). */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --ink-secondary: #52514e;
+  --ink-muted: #898781;
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --reference: #b4b2a9;
 }
 
 @theme inline {
@@ -16,6 +26,13 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --ink-secondary: #c3c2b7;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --reference: #5f5e5a;
   }
 }
 

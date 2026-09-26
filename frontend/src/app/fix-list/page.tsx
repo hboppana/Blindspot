@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { getCitySummary } from "@/lib/api";
+import { getCitySummary, getFixList } from "@/lib/api";
 import { num } from "@/lib/format";
 
 export default async function FixListPage() {
-  const { summary: s, fix_list: fixes } = await getCitySummary();
+  const [{ summary: s }, fixes] = await Promise.all([
+    getCitySummary(),
+    getFixList(),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl p-6">

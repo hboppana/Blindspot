@@ -21,10 +21,19 @@ All data goes through `src/lib/api.ts`, typed by `src/lib/types.ts` (the API con
 | `GET /city/summary` | `mock/city/summary.json` | `/`, `/fix-list` |
 | `GET /intersections` | `mock/intersections.json` | `/` |
 | `GET /intersections/{id}` | `mock/intersections/{id}.json` | `/intersection/[id]` |
-| `GET /fix-list` | `mock/fix-list.json` | not yet |
+| `GET /fix-list` | `mock/fix-list.json` | `/fix-list` |
+
+## Google Maps
+
+Put these in `.env.local` (see `.env.example`):
+
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: needs **Maps JavaScript API** (city map), **Maps Static API** (satellite) and **Street View Static API**. It is visible in the browser, so restrict it by HTTP referrer (localhost and the deployed domain).
+- `GOOGLE_MAPS_SERVER_KEY` (optional): Street View metadata (capture dates) is fetched on the server, where a referrer-restricted key is refused. Use a second key limited to Street View Static API. Without it, photos show but without capture dates.
+
+Imagery always loads live from Google; it isn't stored or proxied (Maps Platform terms).
 
 ## Pages
 
-- `/`: city view (scale header, ranked list; map TODO)
-- `/intersection/[id]`: case file (verdict, stat tiles, crash types, fix, precedent; imagery and charts TODO)
+- `/`: city view: scale header, map colored by main factor, ranked list, filters
+- `/intersection/[id]`: case file: verdict, stat tiles, satellite and Street View, crashes by year and hour, crash types vs. similar corners, fix, precedent
 - `/fix-list`: top 10
