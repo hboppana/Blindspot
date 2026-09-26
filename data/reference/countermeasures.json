@@ -1,0 +1,364 @@
+{
+  "_source": "FHWA Proven Safety Countermeasures (highways.dot.gov/safety/proven-safety-countermeasures). FHWA's site blocks automated requests, so each page was read from its Internet Archive copy (2024-2025 snapshots) on 2026-09-26. Figures are quoted as FHWA publishes them, including what each one measures; 'up to' figures are FHWA's own wording. Superscripts in FHWA's text are source notes on the page.",
+  "_applies_when": "Conditions on the intersection's verified features (road_features.csv): signal yes/no, a leg missing a left-turn lane / crosswalk / median, share of crashes in the dark, lanes. A countermeasure is suggested only where its conditions hold.",
+  "_not_listed": {
+    "protected_left_turn_phasing": "Not an FHWA Proven Safety Countermeasure. Relevant where left-turn crashes are high and left-turn lanes already exist, but we quote no figure for it here; CMFs for it are in FHWA's CMF Clearinghouse and would need to be looked up and cited individually."
+  },
+  "countermeasures": {
+    "left_turn_lanes": {
+      "name": "Dedicated left-turn lanes",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/dedicated-left-and-right-turn-lanes-intersections",
+      "effects": [
+        {
+          "value": "28-48%",
+          "measure": "reduction in total crashes (left-turn lane)"
+        },
+        {
+          "value": "36%",
+          "measure": "reduction in fatal and injury crashes (positive offset left-turn lanes)"
+        }
+      ],
+      "addresses": [
+        "left_turn",
+        "rear_end"
+      ],
+      "applies_when": {
+        "legs_missing": "left_turn_lane"
+      }
+    },
+    "right_turn_lanes": {
+      "name": "Dedicated right-turn lanes",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/dedicated-left-and-right-turn-lanes-intersections",
+      "effects": [
+        {
+          "value": "14-26%",
+          "measure": "reduction in total crashes"
+        }
+      ],
+      "addresses": [
+        "right_turn"
+      ],
+      "applies_when": {},
+      "note": "Suggested only where right-turn crashes stand out: the imagery labels don't record whether right-turn lanes already exist."
+    },
+    "reduced_left_turn_conflict": {
+      "name": "Reduced left-turn conflict intersection (RCUT / MUT)",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/reduced-left-turn-conflict-intersections",
+      "effects": [
+        {
+          "value": "22%",
+          "measure": "reduction in fatal and injury crashes (signalized intersection to signalized RCUT)"
+        },
+        {
+          "value": "54%",
+          "measure": "reduction in fatal and injury crashes (two-way stop-controlled to RCUT)"
+        },
+        {
+          "value": "63%",
+          "measure": "reduction in fatal and injury crashes (unsignalized intersection to unsignalized RCUT)"
+        },
+        {
+          "value": "30%",
+          "measure": "reduction in intersection-related injury crash rate (MUT)"
+        }
+      ],
+      "addresses": [
+        "left_turn",
+        "angle"
+      ],
+      "applies_when": {
+        "major_project": true
+      }
+    },
+    "roundabout": {
+      "name": "Roundabout",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/roundabouts",
+      "effects": [
+        {
+          "value": "78%",
+          "measure": "reduction in fatal and injury crashes (signalized intersection to roundabout)"
+        },
+        {
+          "value": "82%",
+          "measure": "reduction in fatal and injury crashes (two-way stop-controlled intersection to roundabout)"
+        }
+      ],
+      "addresses": [
+        "angle",
+        "left_turn"
+      ],
+      "applies_when": {
+        "major_project": true,
+        "max_lanes": 4
+      }
+    },
+    "yellow_change_intervals": {
+      "name": "Appropriate yellow change intervals",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/yellow-change-intervals",
+      "effects": [
+        {
+          "value": "36-50%",
+          "measure": "reduction in red-light running"
+        },
+        {
+          "value": "8-14%",
+          "measure": "reduction in total crashes"
+        },
+        {
+          "value": "12%",
+          "measure": "reduction in injury crashes"
+        }
+      ],
+      "addresses": [
+        "angle",
+        "left_turn",
+        "rear_end"
+      ],
+      "applies_when": {
+        "signal": "yes"
+      }
+    },
+    "signal_backplates": {
+      "name": "Signal backplates with retroreflective borders",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/backplates-retroreflective-borders",
+      "effects": [
+        {
+          "value": "15%",
+          "measure": "reduction in total crashes"
+        }
+      ],
+      "addresses": [
+        "rear_end",
+        "angle"
+      ],
+      "applies_when": {
+        "signal": "yes"
+      }
+    },
+    "leading_pedestrian_interval": {
+      "name": "Leading pedestrian interval",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/leading-pedestrian-interval",
+      "effects": [
+        {
+          "value": "13%",
+          "measure": "reduction in pedestrian-vehicle crashes at intersections"
+        }
+      ],
+      "addresses": [
+        "pedestrian",
+        "bicycle"
+      ],
+      "applies_when": {
+        "signal": "yes"
+      }
+    },
+    "crosswalk_visibility": {
+      "name": "Crosswalk visibility enhancements (high-visibility crosswalks, lighting, advance yield/stop markings)",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/crosswalk-visibility-enhancements",
+      "effects": [
+        {
+          "value": "up to 40%",
+          "measure": "reduction in pedestrian injury crashes (high-visibility crosswalks)"
+        },
+        {
+          "value": "up to 42%",
+          "measure": "reduction in pedestrian crashes (intersection lighting)"
+        },
+        {
+          "value": "up to 25%",
+          "measure": "reduction in pedestrian crashes (advance yield or stop markings and signs)"
+        }
+      ],
+      "addresses": [
+        "pedestrian"
+      ],
+      "applies_when": {}
+    },
+    "median_refuge_island": {
+      "name": "Medians and pedestrian refuge islands",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/medians-and-pedestrian-refuge-islands-urban-and-suburban-areas",
+      "effects": [
+        {
+          "value": "46%",
+          "measure": "reduction in pedestrian crashes (median with marked crosswalk)"
+        },
+        {
+          "value": "56%",
+          "measure": "reduction in pedestrian crashes (pedestrian refuge island)"
+        }
+      ],
+      "addresses": [
+        "pedestrian"
+      ],
+      "applies_when": {
+        "legs_missing": "median"
+      }
+    },
+    "pedestrian_hybrid_beacon": {
+      "name": "Pedestrian hybrid beacon",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/pedestrian-hybrid-beacons",
+      "effects": [
+        {
+          "value": "55%",
+          "measure": "reduction in pedestrian crashes"
+        },
+        {
+          "value": "29%",
+          "measure": "reduction in total crashes"
+        },
+        {
+          "value": "15%",
+          "measure": "reduction in serious injury and fatal crashes"
+        }
+      ],
+      "addresses": [
+        "pedestrian"
+      ],
+      "applies_when": {
+        "signal": "no"
+      }
+    },
+    "rrfb": {
+      "name": "Rectangular rapid flashing beacon",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/rectangular-rapid-flashing-beacons-rrfb",
+      "effects": [
+        {
+          "value": "up to 47%",
+          "measure": "reduction in pedestrian crashes"
+        }
+      ],
+      "addresses": [
+        "pedestrian"
+      ],
+      "applies_when": {
+        "signal": "no"
+      }
+    },
+    "bicycle_lanes": {
+      "name": "Bicycle lanes (separated with flexible posts)",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/bicycle-lanes",
+      "effects": [
+        {
+          "value": "up to 53%",
+          "measure": "reduction in bicycle/vehicle crashes (converting a traditional or flush buffered bike lane to a separated one with flexible delineator posts)"
+        },
+        {
+          "value": "up to 49%",
+          "measure": "reduction in total crashes on urban 4-lane undivided collectors and local roads (bicycle lane additions)"
+        },
+        {
+          "value": "up to 30%",
+          "measure": "reduction in total crashes on urban 2-lane undivided collectors and local roads (bicycle lane additions)"
+        }
+      ],
+      "addresses": [
+        "bicycle"
+      ],
+      "applies_when": {}
+    },
+    "lighting": {
+      "name": "Intersection lighting",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/lighting",
+      "effects": [
+        {
+          "value": "up to 42%",
+          "measure": "reduction in nighttime injury pedestrian crashes at intersections"
+        },
+        {
+          "value": "up to 33-38%",
+          "measure": "reduction in nighttime crashes at rural and urban intersections"
+        }
+      ],
+      "addresses": [
+        "dark"
+      ],
+      "applies_when": {
+        "min_dark_share": 0.35
+      }
+    },
+    "road_diet": {
+      "name": "Road diet (4 lanes to 3)",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/road-diets-roadway-reconfiguration",
+      "effects": [
+        {
+          "value": "19-47%",
+          "measure": "reduction in total crashes (4-lane to 3-lane conversions)"
+        }
+      ],
+      "addresses": [
+        "rear_end",
+        "left_turn",
+        "sideswipe",
+        "angle"
+      ],
+      "applies_when": {
+        "lanes_exactly": 4,
+        "median_on_no_leg": true
+      }
+    },
+    "speed_safety_cameras": {
+      "name": "Speed safety cameras",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/speed-safety-cameras",
+      "effects": [
+        {
+          "value": "up to 54%",
+          "measure": "reduction in all crashes on urban principal arterials (fixed units)"
+        },
+        {
+          "value": "up to 47%",
+          "measure": "reduction in injury crashes on urban principal arterials (fixed units)"
+        }
+      ],
+      "addresses": [
+        "speed"
+      ],
+      "applies_when": {
+        "min_speed_limit": 45
+      }
+    },
+    "stop_controlled_low_cost": {
+      "name": "Systemic low-cost countermeasures at stop-controlled intersections",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/systemic-application-multiple-low-cost-countermeasures-stop",
+      "effects": [
+        {
+          "value": "10%",
+          "measure": "reduction in fatal and injury crashes at all locations/types/areas"
+        },
+        {
+          "value": "15%",
+          "measure": "reduction in nighttime crashes at all locations/types/areas"
+        },
+        {
+          "value": "19%",
+          "measure": "reduction in fatal and injury crashes at 2-lane by 2-lane intersections"
+        }
+      ],
+      "addresses": [
+        "angle",
+        "rear_end",
+        "dark"
+      ],
+      "applies_when": {
+        "signal": "no"
+      }
+    },
+    "access_management": {
+      "name": "Corridor access management (fewer driveways)",
+      "url": "https://highways.dot.gov/safety/proven-safety-countermeasures/corridor-access-management",
+      "effects": [
+        {
+          "value": "25-31%",
+          "measure": "reduction in fatal and injury crashes along urban/suburban arterials (reducing driveway density)"
+        }
+      ],
+      "addresses": [
+        "sideswipe",
+        "rear_end",
+        "angle"
+      ],
+      "applies_when": {
+        "corridor": true
+      }
+    }
+  }
+}
