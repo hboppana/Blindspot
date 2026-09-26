@@ -29,7 +29,7 @@ export function CityMap({
 }) {
   if (!apiKey) {
     return (
-      <div className="flex h-full items-center justify-center bg-black/5 p-6 text-center text-sm opacity-70 dark:bg-white/5">
+      <div className="absolute inset-0 flex items-center justify-center bg-black/5 p-6 text-center text-sm opacity-70 dark:bg-white/5">
         Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY in .env.local to show the map
         (needs Maps JavaScript API).
       </div>
@@ -44,7 +44,7 @@ export function CityMap({
         disableDefaultUI
         zoomControl
         clickableIcons={false}
-        className="h-full w-full"
+        className="absolute inset-0"
       >
         <WholeCityButton />
         <DotLayer

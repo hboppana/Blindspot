@@ -31,7 +31,7 @@ All data goes through `src/lib/api.ts` (server-side only, so there's no CORS and
 
 ## Google Maps
 
-`NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` needs **Maps JavaScript API** only. It's visible in the page, so restrict it by HTTP referrer (localhost:3000 and the deployed domain). The satellite map and Street View panorama load live in the browser and are never stored or proxied (Maps Platform terms). The Street View capture date comes from `StreetViewService`.
+The key is read from `GOOGLE_MAPS_API_KEY` in the repo-root `.env` (see `next.config.ts`); set `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` in `frontend/.env.local` to override it. It needs **Maps JavaScript API**. It's visible in the page, so restrict it by HTTP referrer (localhost:3000 and the deployed domain). The satellite map and Street View panorama load live in the browser and are never stored or proxied (Maps Platform terms). The Street View capture date comes from `StreetViewService`.
 
 ## Pages
 

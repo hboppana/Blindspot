@@ -130,7 +130,7 @@ export function CityView({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div className="h-80 md:h-auto md:flex-1">
+        <div className="relative h-80 shrink-0 md:h-auto md:flex-1">
           <CityMap
             apiKey={apiKey}
             intersections={filtered}
