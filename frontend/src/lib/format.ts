@@ -28,8 +28,12 @@ export const FACTOR_GROUPS: Record<
   none: { label: "No clear factor", color: "#9a988f" },
 };
 
-export function factorGroup(i: IntersectionListItem): FactorGroup {
-  if (i.confidence !== "ok") return "none";
+// Only confident corners (and fix-list corners) get a factor colour, so the
+// map doesn't overclaim.
+export function factorGroup(
+  i: Pick<IntersectionListItem, "main_factor" | "confidence" | "in_fix_list">,
+): FactorGroup {
+  if (i.confidence !== "ok" && !i.in_fix_list) return "none";
   switch (i.main_factor) {
     case "angle":
     case "left_turn":

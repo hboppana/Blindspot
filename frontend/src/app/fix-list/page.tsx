@@ -18,6 +18,11 @@ export default async function FixListPage() {
         {num(s.fix_list_excess_crashes_per_year)} a year above what similar
         corners have. Crashes a year averaged over {s.period}.
       </p>
+      <p className="mt-2 text-sm">
+        <Link href="/backtest" className="underline">
+          Would we have caught these before 2022? →
+        </Link>
+      </p>
 
       <table className="mt-6 w-full text-sm">
         <thead className="text-left opacity-60">
@@ -34,7 +39,7 @@ export default async function FixListPage() {
             <tr key={f.id} className="border-t border-black/10 dark:border-white/15">
               <td className="py-2 tabular-nums">#{f.rank}</td>
               <td>
-                <Link href={`/intersection/${f.id}`} className="underline">
+                <Link href={`/intersections/${f.id}`} className="underline">
                   {f.name}
                 </Link>
               </td>

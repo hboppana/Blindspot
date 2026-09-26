@@ -1,73 +1,276 @@
-// Builds mock API responses from data/derived so the frontend runs before the
-// real API exists. Each file mirrors one endpoint (see src/lib/types.ts):
+// Builds mock API responses from data/derived so the frontend runs without the
+// API or its database. Shapes match docs/API.md; the field mapping follows
+// scripts/load_db.py (keep the two in sync).
+//
 //   mock/city/summary.json          GET /city/summary
+//   mock/city/trend.json            GET /city/trend
+//   mock/fix-list.json              GET /fix-list
 //   mock/intersections.json         GET /intersections
 //   mock/intersections/{id}.json    GET /intersections/{id}
-//   mock/fix-list.json              GET /fix-list
+//   mock/backtest.json              frontend-only (not in the API)
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const derived = join(here, "..", "..", "data", "derived");
+const root = join(here, "..", "..");
+const derived = join(root, "data", "derived");
 const out = join(here, "..", "mock");
 
 // Python's json.dump writes NaN, which isn't valid JSON; read it as null.
-const load = (name) =>
+const readJson = (path) =>
   JSON.parse(
-    readFileSync(join(derived, name), "utf8").replace(
+    readFileSync(path, "utf8").replace(
       /(?<=[:,[]\s*)(?:NaN|-?Infinity)\b/g,
       "null",
     ),
   );
+
+function readCsv(path) {
+  const [header, ...lines] = readFileSync(path, "utf8").split(/\r?\n/);
+  const cols = header.split(",");
+  return lines.filter(Boolean).map((line) => {
+    const cells = [];
+    let cell = "";
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (quoted) {
+        if (ch === '"' && line[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else if (ch === '"') quoted = false;
+        else cell += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === ",") {
+        cells.push(cell);
+        cell = "";
+      } else cell += ch;
+    }
+    cells.push(cell);
+    return Object.fromEntries(cols.map((c, i) => [c, cells[i] ?? ""]));
+  });
+}
+
 const write = (path, data) => {
   mkdirSync(dirname(join(out, path)), { recursive: true });
   writeFileSync(join(out, path), JSON.stringify(data));
 };
 
-const city = load("city_summary.json");
-const { hotspots } = load("hotspots.json");
-const { case_files: caseFiles } = load("case_files.json");
-const { intersections: causes } = load("causes.json");
+const num = (v) => (v === "" || v == null ? null : Number(v));
+const text = (v) => (v === "" || v == null ? null : v);
+
+// build_hotspots._display: "SW 34TH ST & SW ARCHER RD" -> "SW 34th St & SW Archer Rd"
+const KEEP = new Set(["N", "S", "E", "W", "NW", "NE", "SW", "SE", "SR", "US", "CR", "FL", "&"]);
+const display = (name) =>
+  name
+    .split(/\s+/)
+    .map((w) =>
+      KEEP.has(w)
+        ? w
+        : /^\d/.test(w)
+          ? w.toLowerCase()
+          : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+    )
+    .join(" ");
+
+const city = readJson(join(derived, "city_summary.json"));
+const hotspotList = readJson(join(derived, "hotspots.json")).hotspots;
+const hotspots = new Map(hotspotList.map((h) => [h.id, h]));
+const causes = readJson(join(derived, "causes.json"));
+const recs = readJson(join(derived, "recommendations.json")).intersections;
+const cases = readJson(join(derived, "case_files.json")).case_files;
+const measures = readJson(join(root, "data", "reference", "countermeasures.json")).countermeasures;
+
+// load_db.load_road_features: two raw names can share a slug; keep the busier.
+const features = new Map();
+for (const r of readCsv(join(derived, "road_features.csv"))) {
+  const old = features.get(r.id);
+  if (!old || Number(r.crashes_all_years) > Number(old.crashes_all_years))
+    features.set(r.id, r);
+}
+const latlon = new Map(
+  readCsv(join(derived, "intersections.csv")).map((r) => [
+    r.intersection_id,
+    [Number(r.lat), Number(r.lon)],
+  ]),
+);
+const fixRank = new Map(city.fix_list.map((f) => [f.id, f.rank]));
+
+// load_db.intersection_rows
+const rows = [...features.entries()].map(([id, f]) => {
+  const h = hotspots.get(id);
+  const c = causes.intersections[id] ?? {};
+  const s = causes.screening[id] ?? {};
+  const rec = recs[id]?.recommendations?.[0] ?? {};
+  const crash = h?.crashes;
+  const [lat, lon] = latlon.get(f.intersection_id);
+  return {
+    id,
+    name: h ? h.name : display(f.intersection_id),
+    raw_name: f.intersection_id,
+    lat,
+    lon,
+    crashes_since_2022: Number(f.crashes_window),
+    crashes_all_years: Number(f.crashes_all_years),
+    fdot_crashes: Number(f.fdot_crashes),
+    pedestrian_crashes: crash ? Math.round(crash.pedestrian_share * crash.crashes) : null,
+    bicycle_crashes: crash ? Math.round(crash.bicycle_share * crash.crashes) : null,
+    has_gemini_description: (cases[id]?.source ?? "").startsWith("gemini"),
+    screening_rank: s.rank ?? null,
+    observed: s.observed ?? null,
+    predicted: s.predicted ?? null,
+    excess_per_year: s.excess_per_year ?? null,
+    main_factor: c.main_factor ?? null,
+    verdict: c.verdict ?? null,
+    confidence: c.confidence ?? null,
+    crash_rate_vs_similar: c.crash_rate?.vs_similar ?? null,
+    recommended_fix_id: rec.id ?? null,
+    recommended_fix_name: rec.name ?? null,
+    traffic_signal: text(f.traffic_signal),
+    crosswalk: text(f.crosswalk),
+    left_turn_lane: text(f.left_turn_lane),
+    median: text(f.median),
+    speed_limit: num(f.speed_limit),
+    fdot_lanes_max: num(f.fdot_lanes_max),
+    daily_traffic_max: num(f.daily_traffic_max),
+    has_imagery_labels: f.has_gemini === "True",
+    osm_matched: f.osm_matched === "True",
+    imagery_from: text(f.imagery_from),
+    imagery_to: text(f.imagery_to),
+    in_fix_list: fixRank.has(id),
+    fix_list_rank: fixRank.get(id) ?? null,
+  };
+});
+
+// api/main.py: ORDER BY screening_rank NULLS LAST, crashes_since_2022 DESC
+rows.sort(
+  (a, b) =>
+    (a.screening_rank ?? Infinity) - (b.screening_rank ?? Infinity) ||
+    b.crashes_since_2022 - a.crashes_since_2022,
+);
 
 rmSync(out, { recursive: true, force: true });
 
-write("city/summary.json", city);
-write("fix-list.json", city.fix_list);
+// GET /city/summary has no fix_list; GET /fix-list serves it.
+const summary = { ...city };
+delete summary.fix_list;
+write("city/summary.json", summary);
 
+const LIST = [
+  "id", "name", "lat", "lon", "crashes_since_2022", "excess_per_year",
+  "screening_rank", "main_factor", "confidence", "has_gemini_description",
+  "recommended_fix_name", "pedestrian_crashes", "bicycle_crashes", "in_fix_list",
+];
+write("intersections.json", rows.map((r) => Object.fromEntries(LIST.map((k) => [k, r[k]]))));
+
+const byId = new Map(rows.map((r) => [r.id, r]));
 write(
-  "intersections.json",
-  hotspots.map((h) => {
-    const cause = causes[h.id];
-    return {
-      id: h.id,
-      name: h.name,
-      rank: h.rank,
-      lat: h.lat,
-      lon: h.lon,
-      crashes_since_2022: h.crashes.crashes,
-      pedestrian_or_bike_share: +(
-        h.crashes.pedestrian_share + h.crashes.bicycle_share
-      ).toFixed(3),
-      main_factor: cause?.main_factor ?? null,
-      confidence: cause?.confidence ?? null,
-    };
+  "fix-list.json",
+  city.fix_list.map((f) => {
+    const r = byId.get(f.id);
+    return r
+      ? { ...f, lat: r.lat, lon: r.lon, main_factor: r.main_factor, has_gemini_description: r.has_gemini_description }
+      : f;
   }),
 );
 
-for (const h of hotspots) {
-  const cf = caseFiles[h.id];
-  write(`intersections/${h.id}.json`, {
-    id: h.id,
-    name: h.name,
-    rank: h.rank,
-    lat: h.lat,
-    lon: h.lon,
-    crashes: h.crashes,
-    facts: cf?.facts ?? null,
-    case_file: cf?.case_file ?? null,
-    source: cf?.source ?? null,
+// api/main.py load_intersection
+for (const r of rows) {
+  const cf = cases[r.id];
+  const recommended = (recs[r.id]?.recommendations ?? []).map((m) => m.id);
+  if (!recommended.length && r.recommended_fix_id) recommended.push(r.recommended_fix_id);
+  write(`intersections/${r.id}.json`, {
+    ...r,
+    case_file: cf
+      ? {
+          source: cf.source,
+          prompt_version: cf.prompt_version ?? null,
+          case_file: cf.case_file,
+          facts: cf.facts ?? null,
+          causes: causes.intersections[r.id] ?? null,
+          recommendations: recs[r.id] ?? null,
+          crash_profile: hotspots.get(r.id)?.crashes ?? null,
+          fdot_profile: hotspots.get(r.id)?.causes_fdot ?? null,
+        }
+      : null,
+    countermeasures: recommended
+      .filter((id) => measures[id])
+      .map((id) => ({
+        id,
+        url: null,
+        applies_when: null,
+        note: null,
+        ...measures[id],
+      })),
   });
 }
 
-console.log(`mock data: ${hotspots.length} intersections -> ${out}`);
+// crashes_monthly continuous aggregate (api/schema.sql)
+const months = new Map();
+for (const c of readCsv(join(root, "data", "processed", "gnv_crashes_clean.csv"))) {
+  if (!c.crash_datetime) continue;
+  const month = c.crash_datetime.slice(0, 7);
+  const m =
+    months.get(month) ??
+    months
+      .set(month, {
+        month,
+        crashes: 0,
+        pedestrian_crashes: 0,
+        bicycle_crashes: 0,
+        fatal_crashes: 0,
+        fatalities: 0,
+        at_intersection_crashes: 0,
+      })
+      .get(month);
+  const fatalities = Number(c.fatalities) || 0;
+  m.crashes++;
+  m.pedestrian_crashes += c.involves_pedestrian === "1";
+  m.bicycle_crashes += c.involves_bicycle === "1";
+  m.fatal_crashes += fatalities > 0;
+  m.fatalities += fatalities;
+  m.at_intersection_crashes += c.at_intersection === "1";
+}
+write("city/trend.json", [...months.values()].sort((a, b) => a.month.localeCompare(b.month)));
+
+// scripts/backtest.py: today's top 20 (by crashes since 2022) against the
+// ranking built from 2015-2021 only, matched by location within 40 m.
+// build_hotspots.py constants
+const LAT0 = 29.65;
+const M_PER_DEG_LAT = 110_860;
+const M_PER_DEG_LON = 111_320 * Math.cos((LAT0 * Math.PI) / 180);
+const MATCH_M = 40;
+const past = readJson(join(derived, "backtest_2015_2021.json")).hotspots;
+const TOP = 20;
+const backRows = hotspotList.slice(0, TOP).map((h) => {
+  let best = null;
+  let bestD = Infinity;
+  for (const p of past) {
+    const d = Math.hypot((p.lon - h.lon) * M_PER_DEG_LON, (p.lat - h.lat) * M_PER_DEG_LAT);
+    if (d < bestD) {
+      bestD = d;
+      best = p;
+    }
+  }
+  return {
+    id: h.id,
+    name: h.name,
+    rank_now: h.rank,
+    crashes_now: h.crashes.crashes,
+    rank_before_2022: bestD <= MATCH_M ? best.rank : null,
+  };
+});
+const flagged = (k) => backRows.filter((r) => r.rank_before_2022 && r.rank_before_2022 <= k).length;
+write("backtest.json", {
+  top: TOP,
+  flagged_in_top_10: flagged(10),
+  flagged_in_top_20: flagged(20),
+  flagged_in_top_50: flagged(50),
+  rows: backRows,
+});
+
+console.log(
+  `mock data: ${rows.length} intersections, ${months.size} months, ` +
+    `backtest ${flagged(20)} of ${TOP} -> ${out}`,
+);

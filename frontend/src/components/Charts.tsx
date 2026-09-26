@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -161,5 +163,41 @@ export function CrashTypesVsSimilar({
         </BarChart>
       </ResponsiveContainer>
     </figure>
+  );
+}
+
+// Citywide dataGNV crashes per month (GET /city/trend).
+export function CityTrend({
+  months,
+}: {
+  months: { month: string; crashes: number }[];
+}) {
+  const data = months.map((m) => ({ month: m.month, crashes: m.crashes }));
+  const januaries = data.filter((d) => d.month.endsWith("-01")).map((d) => d.month);
+  return (
+    <ResponsiveContainer width="100%" height={160}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <CartesianGrid vertical={false} stroke="var(--grid)" />
+        <XAxis
+          dataKey="month"
+          {...axis}
+          ticks={januaries}
+          tickFormatter={(m: string) => m.slice(0, 4)}
+        />
+        <YAxis {...axis} axisLine={false} allowDecimals={false} />
+        <Tooltip {...tooltip} />
+        <Area
+          type="linear"
+          dataKey="crashes"
+          name="Crashes"
+          stroke="var(--series-1)"
+          strokeWidth={2}
+          fill="var(--series-1)"
+          fillOpacity={0.1}
+          isAnimationActive={false}
+          activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--background)" }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }

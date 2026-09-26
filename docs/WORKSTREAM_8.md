@@ -1,5 +1,12 @@
 # Workstream 8: City audit console (frontend)
 
+> **As built (branch `frontend/scaffold`).** See `frontend/README.md`. Where the build differs from the plan below:
+> - The app is in `frontend/`, not `web/`. The route is `/intersections/[id]`, as planned.
+> - The API is fetched server-side through `API_BASE_URL`, not `NEXT_PUBLIC_API_URL`. The browser never calls the API. Mock mode (`npm run mocks`) serves API-shaped JSON built from `data/derived`, so the UI works without the database.
+> - Map points are one Google Maps Data layer, not deck.gl, with no Map ID needed. Colours are three factor groups (turning and angle, rear-end and sideswipe, pedestrian and bike) plus grey, not eight colours: at most three hues stay distinguishable for colourblind readers when mixed on a map.
+> - PDF export links to the API's `report.pdf` through a same-origin proxy. Without the API, a print stylesheet is the fallback.
+> - Added a `/backtest` page (16 of today's top 20 flagged with pre-2022 data), built from `backtest_2015_2021.json`. The API has no endpoint for it.
+
 ## Context
 
 Workstream 7 is done on the local `dataWorkStream` branch: the Tiger Data database is loaded and a FastAPI (`api/main.py`, documented in `docs/API.md`) serves the intersection list, case files, fix list, city summary and citywide trend. Nothing shows it yet. Workstream 8 builds the console a city traffic engineer (and a judge) actually looks at: a city map with a ranked list, a case file per intersection, and a fix list, following `docs/PLAN.md` §8.

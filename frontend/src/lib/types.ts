@@ -1,7 +1,8 @@
-// API contract between the frontend and the backend (docs/PLAN.md, workstream 7).
-// Shapes follow data/derived; scripts/make-mocks.mjs builds mocks to match.
+// Response types for the StreetSmart API (docs/API.md, api/main.py).
+// scripts/make-mocks.mjs builds mock responses in the same shapes.
 
 export type Confidence = "ok" | "low";
+export type YesNo = "yes" | "no" | null; // null: unknown
 
 export type Factor =
   | "rear_end"
@@ -16,7 +17,7 @@ export type Factor =
 // GET /city/summary
 export interface CitySummary {
   summary: {
-    period: string;
+    period: string; // "2022-01-01 to 2026-07-23"
     intersections_investigated: number;
     with_road_design_from_imagery: number;
     with_repeat_crashes: number;
@@ -24,15 +25,25 @@ export interface CitySummary {
     with_clear_fixable_pattern: number;
     crashes_citywide_since_2022: number;
     crashes_at_intersections_since_2022: number;
+    share_of_crashes_at_intersections_pct: number;
     fix_list_crashes_per_year: number;
     fix_list_excess_crashes_per_year: number;
     worst_intersection: string;
     worst_crash_rate_times_similar_corners: number;
-    share_of_crashes_at_intersections_pct: number;
   };
   definitions: Record<string, string>;
-  fix_list: FixListItem[];
-  audit_report: { text: string };
+  audit_report: { text: string; problems?: string[] | null; model?: string };
+}
+
+// GET /city/trend
+export interface TrendMonth {
+  month: string; // "YYYY-MM"
+  crashes: number;
+  pedestrian_crashes: number;
+  bicycle_crashes: number;
+  fatal_crashes: number;
+  fatalities: number;
+  at_intersection_crashes: number;
 }
 
 // GET /fix-list
@@ -40,38 +51,79 @@ export interface FixListItem {
   id: string;
   name: string;
   rank: number;
+  recommended_fix: string;
   crashes_per_year: number;
   excess_crashes_per_year: number;
-  recommended_fix: string;
+  lat: number;
+  lon: number;
+  main_factor: Factor | null;
+  has_gemini_description: boolean;
 }
 
 // GET /intersections
 export interface IntersectionListItem {
   id: string;
   name: string;
-  rank: number;
   lat: number;
   lon: number;
   crashes_since_2022: number;
-  pedestrian_or_bike_share: number;
-  main_factor: Factor | null; // null: no clear factor
-  confidence: Confidence | null; // null: no FDOT cause data
+  excess_per_year: number | null;
+  screening_rank: number | null; // null: not screened
+  main_factor: Factor | null;
+  confidence: Confidence | null;
+  has_gemini_description: boolean;
+  recommended_fix_name: string | null;
+  pedestrian_crashes: number | null;
+  bicycle_crashes: number | null;
+  in_fix_list: boolean;
 }
 
 // GET /intersections/{id}
-export interface IntersectionDetail {
-  id: string;
-  name: string;
-  rank: number;
-  lat: number;
-  lon: number;
-  crashes: CrashCounts;
-  facts: CaseFacts | null;
-  case_file: CaseFileText | null; // null for template (quieter) intersections
-  source: string | null;
+export interface IntersectionDetail extends IntersectionListItem {
+  raw_name: string;
+  crashes_all_years: number;
+  fdot_crashes: number;
+  observed: number | null;
+  predicted: number | null;
+  verdict: "main" | "leading" | "mixed" | null;
+  crash_rate_vs_similar: number | null;
+  recommended_fix_id: string | null;
+  traffic_signal: YesNo;
+  crosswalk: YesNo;
+  left_turn_lane: YesNo;
+  median: YesNo;
+  speed_limit: number | null;
+  fdot_lanes_max: number | null;
+  daily_traffic_max: number | null;
+  has_imagery_labels: boolean;
+  osm_matched: boolean;
+  imagery_from: string | null; // "YYYY-MM"
+  imagery_to: string | null;
+  fix_list_rank: number | null;
+  case_file: CaseFile | null; // null for 594 intersections
+  countermeasures: Countermeasure[]; // best first
 }
 
-export interface CrashCounts {
+export interface CaseFile {
+  source: string; // "gemini-..." or "template"
+  prompt_version: number | null;
+  case_file: CaseFileText;
+  facts: CaseFacts | null;
+  causes: unknown;
+  recommendations: unknown;
+  crash_profile: CrashProfile | null;
+  fdot_profile: unknown;
+}
+
+export interface CaseFileText {
+  verdict: string;
+  factor_explanations?: { factor: string; explanation: string }[];
+  recommended_fix?: { countermeasure_id: string; why: string } | null;
+  audit_text?: string;
+}
+
+// dataGNV crashes since 2022
+export interface CrashProfile {
   crashes: number;
   by_year: Record<string, number>;
   by_hour: number[]; // 24 entries, 0:00 to 23:00
@@ -85,8 +137,11 @@ export interface CrashCounts {
 export interface Countermeasure {
   id: string;
   name: string;
-  cost: "low" | "medium" | "high";
-  fhwa_effects: string[];
+  url: string | null;
+  effects: { value: string; measure: string }[];
+  addresses: string[];
+  applies_when: unknown;
+  note: string | null;
 }
 
 export interface DistinctiveCrashType {
@@ -98,15 +153,10 @@ export interface DistinctiveCrashType {
   road_records: string[];
 }
 
+// The computed facts a case file's text was written from.
 export interface CaseFacts {
-  intersection: string;
   crashes_since_2022: number;
-  crashes_by_year: Record<string, number>;
-  pedestrian_crash_pct: number;
-  bicycle_crash_pct: number;
-  fatal_crashes: number;
   busiest_hours: string[];
-  traffic_signal: string;
   screening: {
     citywide_rank: number;
     observed_crashes: number;
@@ -118,16 +168,15 @@ export interface CaseFacts {
     similar_corners_median: number;
     times_similar_corners: number;
   } | null;
-  crash_types_2015_2018: {
-    fdot_crashes: number;
-    pattern: string;
-    top_types: { type: string; pct: number; similar_corners_pct: number }[];
-  } | null;
   distinctive_crash_types: DistinctiveCrashType[];
-  dark_crash_pct: number;
   confidence: Confidence;
   confidence_reasons: string[];
-  countermeasures: Countermeasure[];
+  countermeasures: {
+    id: string;
+    name: string;
+    cost: "low" | "medium" | "high";
+    fhwa_effects: string[];
+  }[];
   gainesville_precedent: {
     intersection: string;
     change: string;
@@ -136,9 +185,17 @@ export interface CaseFacts {
   imagery_dates: string | null;
 }
 
-export interface CaseFileText {
-  verdict: string;
-  factor_explanations: { factor: string; explanation: string }[];
-  recommended_fix: { countermeasure_id: string; why: string } | null;
-  audit_text: string;
+// Not in the API yet: frontend-only, built by scripts/make-mocks.mjs.
+export interface Backtest {
+  top: number;
+  flagged_in_top_10: number;
+  flagged_in_top_20: number;
+  flagged_in_top_50: number;
+  rows: {
+    id: string;
+    name: string;
+    rank_now: number;
+    crashes_now: number;
+    rank_before_2022: number | null;
+  }[];
 }

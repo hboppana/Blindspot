@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
+import {
+  APIProvider,
+  ControlPosition,
+  Map,
+  MapControl,
+  useMap,
+} from "@vis.gl/react-google-maps";
 import type { IntersectionListItem } from "@/lib/types";
 import { FACTOR_GROUPS, factorGroup } from "@/lib/format";
 
@@ -24,7 +30,7 @@ export function CityMap({
   if (!apiKey) {
     return (
       <div className="flex h-full items-center justify-center bg-black/5 p-6 text-center text-sm opacity-70 dark:bg-white/5">
-        Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local to show the map
+        Set NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY in .env.local to show the map
         (needs Maps JavaScript API).
       </div>
     );
@@ -40,6 +46,7 @@ export function CityMap({
         clickableIcons={false}
         className="h-full w-full"
       >
+        <WholeCityButton />
         <DotLayer
           intersections={intersections}
           selectedId={selectedId}
@@ -47,6 +54,23 @@ export function CityMap({
         />
       </Map>
     </APIProvider>
+  );
+}
+
+function WholeCityButton() {
+  const map = useMap();
+  return (
+    <MapControl position={ControlPosition.TOP_LEFT}>
+      <button
+        onClick={() => {
+          map?.panTo(GAINESVILLE);
+          map?.setZoom(12);
+        }}
+        className="m-2.5 rounded bg-white px-3 py-1.5 text-sm font-medium text-black shadow"
+      >
+        Whole city
+      </button>
+    </MapControl>
   );
 }
 
@@ -91,6 +115,7 @@ function DotLayer({
           name: i.name,
           crashes: i.crashes_since_2022,
           color: FACTOR_GROUPS[factorGroup(i)].color,
+          fixList: i.in_fix_list,
         },
       });
     }
@@ -100,6 +125,7 @@ function DotLayer({
     if (!layer) return;
     layer.setStyle((f) => {
       const selected = f.getId() === selectedId;
+      const fixList = f.getProperty("fixList") as boolean;
       return {
         title: `${f.getProperty("name")} · ${f.getProperty("crashes")} crashes since 2022`,
         icon: {
@@ -107,10 +133,10 @@ function DotLayer({
           scale: dotScale(f.getProperty("crashes") as number),
           fillColor: f.getProperty("color") as string,
           fillOpacity: 0.85,
-          strokeColor: selected ? "#0b0b0b" : "#ffffff",
-          strokeWeight: selected ? 3 : 1,
+          strokeColor: selected || fixList ? "#0b0b0b" : "#ffffff",
+          strokeWeight: selected ? 3.5 : fixList ? 2 : 1,
         },
-        zIndex: selected ? 1000 : undefined,
+        zIndex: selected ? 1000 : fixList ? 500 : undefined,
       };
     });
   }, [layer, selectedId]);
