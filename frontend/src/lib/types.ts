@@ -213,3 +213,23 @@ export interface WatchList {
     per_year_now: number; // last full year and this year's pace, averaged
   }[];
 }
+
+// GET /fix-plan/notes: draft request letters, written by Snowflake Cortex from
+// the Fix Plan's own figures (scripts/cortex_fix_plan.py). Absent until run.
+export interface FixPlanNotes {
+  source: string; // "snowflake-cortex-<model>"
+  generated_at: string;
+  // Keyed by the recommended fix's name, or by intersection id for a review case.
+  letters: Record<string, { subject: string; body: string }>;
+}
+
+// POST /api/ask: Snowflake Cortex Analyst's answer to one question.
+export interface AskAnswer {
+  question: string;
+  interpretation: string; // how Cortex read the question
+  suggestions: string[]; // offered instead of an answer when the question is unclear
+  sql: string | null;
+  columns: { name: string; type: string }[];
+  rows: (string | null)[][]; // Snowflake returns every value as text
+  truncated: boolean;
+}

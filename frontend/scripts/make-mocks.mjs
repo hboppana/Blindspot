@@ -8,8 +8,9 @@
 //   mock/intersections.json         GET /intersections
 //   mock/intersections/{id}.json    GET /intersections/{id}
 //   mock/backtest.json              GET /backtest
+//   mock/fix-plan/notes.json        GET /fix-plan/notes (Snowflake Cortex text; only if generated)
 //   mock/watch-list.json            GET /watch-list
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -317,6 +318,11 @@ const watchRows = hotspotList
     per_year_now: Math.round(r.late * 10) / 10,
   }));
 write("watch-list.json", { through: periodEnd, rows: watchRows });
+
+// Fix Plan text written by Snowflake Cortex (scripts/cortex_fix_plan.py). Not
+// every checkout has run it; without the file the page shows no Cortex text.
+const cortexNotes = join(derived, "fix_plan_cortex.json");
+if (existsSync(cortexNotes)) write("fix-plan/notes.json", readJson(cortexNotes));
 
 console.log(
   `mock data: ${rows.length} intersections, ${months.size} months, ` +

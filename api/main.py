@@ -99,6 +99,16 @@ def fix_list():
     return [{**f, **{k: v for k, v in places.get(f["id"], {}).items() if k != "id"}} for f in fixes]
 
 
+@app.get("/fix-plan/notes")
+def fix_plan_notes():
+    """The Fix Plan's "where to start" summary and draft request letters, written by
+    Snowflake Cortex from the Fix Plan's own figures (scripts/cortex_fix_plan.py)."""
+    row = fetch_one("SELECT notes FROM fix_plan_notes WHERE id = 1")
+    if not row:
+        raise HTTPException(404, "No Cortex notes loaded: run scripts/cortex_fix_plan.py, then load_db.py")
+    return row["notes"]
+
+
 @app.get("/watch-list")
 def watch_list():
     """Intersections whose crashes are climbing, worst climb first; the top 10 on the fix list are left out.

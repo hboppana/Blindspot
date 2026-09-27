@@ -8,6 +8,7 @@ Drops and recreates every table from api/schema.sql, then loads:
   city_summary     city_summary.json
   countermeasures  data/reference/countermeasures.json
   backtest_hotspots  backtest_2015_2021.json: the ranking from 2015 to 2021 only
+  fix_plan_notes   fix_plan_cortex.json: Fix Plan text by Snowflake Cortex, if generated
   crashes          every dataGNV crash (hypertable), for citywide trends,
                    and refreshes the crashes_monthly continuous aggregate
 
@@ -214,6 +215,10 @@ def main():
             print(f"countermeasures: {n}")
             n = insert(cur, "backtest_hotspots", backtest_rows())
             print(f"backtest_hotspots: {n}")
+            notes = DERIVED / "fix_plan_cortex.json"
+            if notes.exists():
+                insert(cur, "fix_plan_notes", [{"id": 1, "notes": Jsonb(read_json(notes))}])
+                print("fix_plan_notes: 1")
             n, skipped = copy_crashes(cur)
             print(f"crashes: {n}" + (f" ({skipped} without a time skipped)" if skipped else ""))
 

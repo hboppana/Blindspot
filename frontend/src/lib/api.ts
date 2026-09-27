@@ -5,6 +5,7 @@ import type {
   Backtest,
   CitySummary,
   FixListItem,
+  FixPlanNotes,
   IntersectionDetail,
   IntersectionListItem,
   TrendMonth,
@@ -55,3 +56,6 @@ export const getFixList = () => getOrThrow<FixListItem[]>("/fix-list");
 export const getBacktest = () => getOrThrow<Backtest>("/backtest");
 
 export const getWatchList = () => getOrThrow<WatchList>("/watch-list");
+
+// Snowflake Cortex's summary and letters for the Fix Plan; null when not generated.
+export const getFixPlanNotes = () => get<FixPlanNotes>("/fix-plan/notes");
