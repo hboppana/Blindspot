@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+/* Data colours: first three slots of the dataviz reference palette
+   (validated all-pairs for CVD in both modes). They stay data-only.
+
+   Interface colours come from the road: asphalt for structure, concrete for
+   the page, lane-marking yellow as the one bold element, guide-sign green for
+   "this worked". Type is Overpass, a descendant of the Highway Gothic lettering
+   on US road signs. */
+:root {
+  --background: #eceeef; /* concrete */
+  --surface: #ffffff; /* paper */
+  --foreground: #1f2226; /* asphalt */
+  --line: #d5d9dc;
+  --ink-secondary: #52514e;
+  --ink-muted: #5f666d;
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --reference: #b4b2a9;
+
+  --brand: #1f2226; /* asphalt */
+  --brand-hover: #353a40;
+  --brand-ink: #1f2226;
+  --brand-soft: #f3f4f5;
+  --accent: #f6c700; /* lane-marking yellow */
+  --accent-soft: #fff4c2;
+  --accent-ink: #6b5200;
+  --good-soft: #e1f0ea;
+  --good-ink: #0b6e4f; /* guide-sign green */
+  --danger-ink: #b00d27; /* grade-F red, dark enough to read as text */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-line: var(--line);
+  --color-muted: var(--ink-muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-good-soft: var(--good-soft);
+  --color-good-ink: var(--good-ink);
+  --color-danger-ink: var(--danger-ink);
+  --font-sans: var(--font-overpass);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #15171a;
+    --surface: #1d2024;
+    --foreground: #eceeef;
+    --line: #30343a;
+    --ink-secondary: #c3c2b7;
+    --ink-muted: #9aa1a8;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --reference: #5f5e5a;
+
+    --brand: #0f1113;
+    --brand-hover: #2a2e33;
+    --brand-ink: #eceeef;
+    --brand-soft: #24282d;
+    --accent: #f6c700;
+    --accent-soft: #3b3108;
+    --accent-ink: #f7d556;
+    --good-soft: #0f2c22;
+    --good-ink: #5fd3a2;
+    --danger-ink: #ff7385;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* The one bold element: the header ends in a strip of asphalt with a dashed
+   centre line, like the road it's about. */
+.lane-line {
+  height: 10px;
+  background:
+    repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)
+      left center / 100% 3px no-repeat,
+    var(--brand);
+}
+
+/* The road under the header: asphalt with a dashed centre line, stuck to the
+   top of the screen. The car on it is the page's scroll progress: it drives
+   from left to right as you read down. Browsers without scroll-driven
+   animations, and people who prefer reduced motion, see it parked. */
+.lane-road {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 24px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)
+      left center / 100% 3px no-repeat,
+    var(--brand);
+}
+.lane-car {
+  position: absolute;
+  top: 1px;
+  left: 16px;
+  width: 22px;
+  height: 22px;
+  color: #ffffff;
+}
+@keyframes drive {
+  to {
+    transform: translateX(calc(100vw - 72px));
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .lane-car {
+      animation: drive linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+
+/* A lone dashed centre line, for joining steps on the landing page. */
+.lane-dash {
+  height: 3px;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px);
+}
+
+/* Links read like a painted marking: asphalt text, yellow underline. */
+.road-link {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.road-link:hover {
+  text-decoration-thickness: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+}
+
+/* Motion. Only transform and opacity, and only when it says something:
+   figures and conclusions arrive in reading order, rankings assemble, bars grow
+   to their value. Everything is off for people who prefer reduced motion.
+   Stagger with style={{ "--i": n }}. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+  .pop {
+    animation: pop 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 40ms + 150ms);
+  }
+  .grow-x {
+    transform-origin: left center;
+    animation: grow-x 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms + 200ms);
+  }
+
+  /* Below the fold: each element plays once, the first time it scrolls into
+     view, then stays put (scrolling back up never rewinds it). RevealOnce
+     marks elements `.is-in`; `reveal-ready` goes on <html> before first
+     paint, so without JavaScript everything simply shows. */
+  .reveal-ready .reveal:not(.is-in) {
+    opacity: 0;
+  }
+  .reveal-ready .reveal.is-in {
+    animation: rise 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(min(var(--i, 0), 6) * 60ms);
+  }
+  .reveal-grow,
+  .reveal-grow-y {
+    transform-origin: left center;
+  }
+  .reveal-grow-y {
+    transform-origin: center bottom;
+  }
+  .reveal-ready .reveal-grow:not(.is-in) {
+    transform: scaleX(0);
+  }
+  .reveal-ready .reveal-grow-y:not(.is-in) {
+    transform: scaleY(0);
+  }
+  .reveal-ready .reveal-grow.is-in {
+    animation: grow-x 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 120ms;
+  }
+  /* Columns rise from their base. */
+  .reveal-ready .reveal-grow-y.is-in {
+    animation: grow-y 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 100ms;
+  }
+}

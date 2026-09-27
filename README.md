@@ -25,3 +25,11 @@ See [docs/PLAN.md](docs/PLAN.md) for the build plan.
 
 - **On GitHub:** Actions → *Fetch crash data* → *Run workflow*. It downloads both sources, cleans them, and commits the CSVs.
 - **Locally:** `python scripts/fetch_data.py` (standard library only; `--gnv` or `--fdot` for one source), then `pip install pyproj && python scripts/clean_data.py`.
+
+## Database and API
+
+The derived data is served from a Tiger Data (TimescaleDB) database through a FastAPI app. See [docs/API.md](docs/API.md) for the endpoints.
+
+1. **Set up:** `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`, and put `DATABASE_URL=postgres://...?sslmode=require` in `.env`. (Use Python 3.13 if 3.14's venv fails.)
+2. **Load:** `.venv/bin/python scripts/load_db.py`. It drops and recreates every table from [api/schema.sql](api/schema.sql), then loads everything from `data/derived/` and `data/reference/`. Run it by hand whenever the pipeline's outputs change.
+3. **Run:** `.venv/bin/uvicorn api.main:app --reload`, then open http://localhost:8000/docs.
