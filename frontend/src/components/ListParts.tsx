@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/ssr";
 import { TrafficLight, type Light } from "@/components/viz/TrafficLight";
 
-// Shared by the Red List and the Watch List, so the two read as a pair: a
-// signal and three figures up top, then one card per intersection.
+// Shared by the Red List, the Watch List and the Fix Plan, so the three read as
+// one signal: a lit lamp and three figures up top, then the cards.
 
 const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
@@ -16,7 +16,7 @@ export function ListHero({
   title: string;
   lead: string;
   light: Light;
-  stats: { value: React.ReactNode; label: string; tone?: "danger" | "warn" }[];
+  stats: { value: React.ReactNode; label: string; tone?: "danger" | "warn" | "good" }[];
 }) {
   return (
     <section className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
@@ -36,7 +36,13 @@ export function ListHero({
               <dt className="sr-only">{s.label}</dt>
               <dd
                 className={`flex w-24 justify-end text-3xl font-extrabold ${
-                  s.tone === "danger" ? "text-danger-ink" : s.tone === "warn" ? "text-[var(--series-2)]" : ""
+                  s.tone === "danger"
+                    ? "text-danger-ink"
+                    : s.tone === "warn"
+                      ? "text-[var(--series-2)]"
+                      : s.tone === "good"
+                        ? "text-good-ink"
+                        : ""
                 }`}
               >
                 {s.value}

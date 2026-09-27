@@ -145,9 +145,9 @@ export default async function WatchListPage() {
       </section>
 
       <CrossLink
-        href="/red-list"
-        question="Which intersections are the most dangerous today?"
-        label="See the Red List"
+        href="/fix-plan"
+        question="What would fixing the worst of them take?"
+        label="See the Fix Plan"
       />
     </div>
   );

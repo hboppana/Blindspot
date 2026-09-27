@@ -19,13 +19,13 @@ import type { IntersectionDetail, YesNo } from "@/lib/types";
 import {
   capitalize,
   displayName,
-  effectRange,
   factorLabel,
   hour12,
   medianPerYear,
   monthYear,
   num,
   titleCase,
+  totalCrashEffect,
   yearsIn,
 } from "@/lib/format";
 import { gradeOf } from "@/lib/grade";
@@ -81,7 +81,9 @@ export default async function ReportPage(props: PageProps<"/intersections/[id]">
   // The crash type can come from older records; only claim "most crashes here"
   // when there are enough recent crashes to back it.
   const mainType = x.main_factor && x.main_factor !== "other" && x.crashes_since_2022 >= 5 ? x.main_factor : null;
-  const range = fix?.effects[0] ? effectRange(fix.effects[0].value) : null;
+  // Only an effect on total crashes turns into crashes avoided; a fix's first
+  // listed effect can be about something else (red-light running).
+  const range = fix ? totalCrashEffect(fix.effects) : null;
   const avoided = range ? [Math.round(perYear * range[0]), Math.round(perYear * range[1])] : null;
   const busiest = [...(facts?.busiest_hours ?? [])].map((h) => Number(h.slice(0, 2))).sort((a, b) => a - b);
   const byWeekday = profile ? WEEKDAYS.map((d) => ({ day: d, n: profile.by_weekday[d] ?? 0 })) : [];

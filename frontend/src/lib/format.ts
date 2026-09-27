@@ -114,3 +114,13 @@ export function effectRange(value: string): [number, number] | null {
   const lo = Number(m[1]) / 100;
   return [lo, m[2] ? Number(m[2]) / 100 : lo];
 }
+
+/**
+ * A fix's effect on total crashes as [low, high], or null when the FHWA gives
+ * none (e.g. only red-light running, or only fatal and injury crashes).
+ * Crash estimates must use this one; the other effects measure other things.
+ */
+export function totalCrashEffect(effects: { value: string; measure: string }[]) {
+  const e = effects.find((x) => /^reduction in total crashes$/i.test(x.measure.trim()));
+  return e ? effectRange(e.value) : null;
+}

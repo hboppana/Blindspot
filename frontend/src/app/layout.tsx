@@ -46,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <RevealOnce />
         <header className="print:hidden">
           <div className="flex h-[76px] items-center gap-3 bg-brand px-4 text-white sm:h-[98px] sm:gap-8 sm:px-8">
-            <Link href="/" className="flex shrink-0 items-center gap-2.5 text-xl font-extrabold tracking-tight sm:gap-3.5 sm:text-3xl">
+            <Link href="/" className="flex shrink-0 items-center gap-2.5 text-xl font-extrabold tracking-tight sm:gap-3.5 sm:text-2xl lg:text-3xl">
               {/* The cross-road warning sign (MUTCD W2-1). */}
               <svg aria-hidden viewBox="0 0 24 24" className="size-8 sm:size-10">
                 <rect x="4.5" y="4.5" width="15" height="15" rx="2" transform="rotate(45 12 12)" fill="var(--accent)" />
@@ -56,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   (not Overpass's roomy line box) up with the sign. */}
               <span className="block leading-none [text-box:trim-both_cap_alphabetic] max-[430px]:sr-only">
                 StreetSmart
-                <span className="ml-3 hidden font-normal text-white/55 sm:inline">Gainesville</span>
+                <span className="ml-3 hidden font-normal text-white/55 xl:inline">Gainesville</span>
               </span>
             </Link>
             <NavLinks />
