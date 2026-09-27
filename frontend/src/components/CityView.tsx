@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { APIProvider, useMap } from "@vis.gl/react-google-maps";
-import { ArrowsIn, MapTrifold, Path } from "@phosphor-icons/react";
+import { ArrowsIn, ArrowsOut, Crosshair, MapTrifold, Path } from "@phosphor-icons/react";
 import type { IntersectionListItem } from "@/lib/types";
 import { GAINESVILLE } from "@/lib/format";
 import type { TravelMode } from "@/lib/route";
@@ -28,6 +28,23 @@ export function CityView({
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [mode, setMode] = useState<TravelMode>("DRIVING");
   const [selectedRoute, setSelectedRoute] = useState(0);
+  const [full, setFull] = useState(false);
+
+  // Full screen: data-map-full on <html> slides the header away and grows the
+  // map (globals.css animates it). Escape leaves it, unless the key was meant
+  // for a text box. Leaving the page always restores the header.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.toggleAttribute("data-map-full", full);
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => {
+      const typing = e.target instanceof HTMLElement && e.target.closest("input, textarea, gmp-place-autocomplete");
+      if (e.key === "Escape" && !typing) setFull(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [full]);
+  useEffect(() => () => document.documentElement.removeAttribute("data-map-full"), []);
 
   const routes = useMemo(() => plan?.[mode] ?? [], [plan, mode]);
   const route = routes[selectedRoute];
@@ -87,6 +104,19 @@ export function CityView({
             ))}
           </div>
           <WholeCityButton />
+          <button
+            onClick={() => setFull((f) => !f)}
+            aria-pressed={full}
+            aria-label={full ? "Exit full screen" : "Full screen map"}
+            title={full ? "Exit full screen (Esc)" : "Full screen map"}
+            className={`${PANEL} grid size-11 shrink-0 place-items-center rounded-full text-foreground transition-colors hover:bg-brand-soft active:translate-y-px`}
+          >
+            {full ? (
+              <ArrowsIn weight="bold" aria-hidden className="size-5" />
+            ) : (
+              <ArrowsOut weight="bold" aria-hidden className="size-5" />
+            )}
+          </button>
         </div>
 
         {/* Kept mounted so the From and To boxes survive a trip to the city map. */}
@@ -132,7 +162,7 @@ function WholeCityButton() {
       title="Show the whole city"
       className={`${PANEL} grid size-11 shrink-0 place-items-center rounded-full text-foreground transition-colors hover:bg-brand-soft active:translate-y-px`}
     >
-      <ArrowsIn weight="bold" aria-hidden className="size-5" />
+      <Crosshair weight="bold" aria-hidden className="size-5" />
     </button>
   );
 }

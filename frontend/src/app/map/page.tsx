@@ -5,7 +5,7 @@ import { CityView } from "@/components/CityView";
 export default async function MapPage() {
   const intersections = await getIntersections();
   return (
-    <div className="relative h-[calc(100dvh-100px)] sm:h-[calc(100dvh-122px)] min-h-[480px] overflow-hidden">
+    <div className="map-frame relative overflow-hidden">
       <CityView
         intersections={intersections}
         apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY}

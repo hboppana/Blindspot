@@ -8,6 +8,9 @@
    "this worked". Type is Overpass, a descendant of the Highway Gothic lettering
    on US road signs. */
 :root {
+  /* The header bar and the road under it; the map fills what's left. */
+  --header-h: 76px;
+  --road-h: 24px;
   --background: #eceeef; /* concrete */
   --surface: #ffffff; /* paper */
   --foreground: #1f2226; /* asphalt */
@@ -105,7 +108,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 40;
-  height: 24px;
+  height: var(--road-h);
   overflow: hidden;
   background:
     repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)
@@ -131,6 +134,38 @@ body {
       animation: drive linear both;
       animation-timeline: scroll(root);
     }
+  }
+}
+
+@media (min-width: 640px) {
+  :root {
+    --header-h: 98px;
+  }
+}
+
+/* The map page: everything under the header. Full screen (the expand button
+   on the map sets data-map-full on <html>): the header slides up out of view,
+   the road tucks above the top edge, and the map grows into the space. */
+.map-frame {
+  height: calc(100dvh - var(--header-h) - var(--road-h));
+  min-height: 480px;
+}
+html[data-map-full] .site-header {
+  margin-top: calc(-1 * (var(--header-h) + var(--road-h)));
+}
+html[data-map-full] .lane-road {
+  top: calc(-1 * var(--road-h));
+}
+html[data-map-full] .map-frame {
+  height: 100dvh;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .site-header,
+  .lane-road,
+  .map-frame {
+    transition-property: margin-top, top, height;
+    transition-duration: 450ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 

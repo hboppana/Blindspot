@@ -44,8 +44,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col">
         <RevealOnce />
-        <header className="print:hidden">
-          <div className="flex h-[76px] items-center gap-3 bg-brand px-4 text-white sm:h-[98px] sm:gap-8 sm:px-8">
+        <header className="site-header print:hidden">
+          <div className="flex h-[var(--header-h)] items-center gap-3 bg-brand px-4 text-white sm:gap-8 sm:px-8">
             <Link href="/" className="flex shrink-0 items-center gap-2.5 text-xl font-extrabold tracking-tight sm:gap-3.5 sm:text-2xl lg:text-3xl">
               {/* The cross-road warning sign (MUTCD W2-1). */}
               <svg aria-hidden viewBox="0 0 24 24" className="size-8 sm:size-10">
