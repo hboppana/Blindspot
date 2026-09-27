@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist_Mono, Overpass } from "next/font/google";
+import { CarProfile } from "@phosphor-icons/react/ssr";
 import "./globals.css";
 import { NavLinks } from "@/components/NavLinks";
 
@@ -29,20 +30,28 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <header className="print:hidden">
-          <div className="flex h-11 items-center gap-5 bg-brand px-4 text-white sm:gap-8 sm:px-6">
-            <Link href="/" className="flex items-center gap-2.5 text-base font-extrabold tracking-tight">
+          <div className="flex h-[76px] items-center gap-3 bg-brand px-4 text-white sm:h-[98px] sm:gap-8 sm:px-8">
+            <Link href="/" className="flex shrink-0 items-center gap-2.5 text-xl font-extrabold tracking-tight sm:gap-3.5 sm:text-3xl">
               {/* The cross-road warning sign (MUTCD W2-1). */}
-              <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6">
+              <svg aria-hidden viewBox="0 0 24 24" className="size-8 sm:size-10">
                 <rect x="4.5" y="4.5" width="15" height="15" rx="2" transform="rotate(45 12 12)" fill="var(--accent)" />
                 <path d="M10.9 6.5h2.2v4.4h4.4v2.2h-4.4v4.4h-2.2v-4.4H6.5v-2.2h4.4z" fill="var(--brand)" />
               </svg>
-              StreetSmart
-              <span className="hidden font-normal text-white/55 sm:inline">Gainesville</span>
+              {/* Trimmed to the capital letters, so centring lines the letters
+                  (not Overpass's roomy line box) up with the sign. */}
+              <span className="block leading-none [text-box:trim-both_cap_alphabetic]">
+                StreetSmart
+                <span className="ml-3 hidden font-normal text-white/55 sm:inline">Gainesville</span>
+              </span>
             </Link>
             <NavLinks />
           </div>
-          <div className="lane-line" aria-hidden />
         </header>
+        {/* The road under the header. It sticks to the top of the screen and a
+            car drives along it as the page scrolls: a scroll-progress bar. */}
+        <div className="lane-road print:hidden" aria-hidden>
+          <CarProfile weight="fill" className="lane-car" />
+        </div>
         <main className="flex-1">{children}</main>
       </body>
     </html>

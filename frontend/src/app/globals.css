@@ -30,6 +30,7 @@
   --accent-ink: #6b5200;
   --good-soft: #e1f0ea;
   --good-ink: #0b6e4f; /* guide-sign green */
+  --danger-ink: #b00d27; /* grade-F red, dark enough to read as text */
 }
 
 @theme inline {
@@ -47,6 +48,7 @@
   --color-accent-ink: var(--accent-ink);
   --color-good-soft: var(--good-soft);
   --color-good-ink: var(--good-ink);
+  --color-danger-ink: var(--danger-ink);
   --font-sans: var(--font-overpass);
   --font-mono: var(--font-geist-mono);
 }
@@ -75,6 +77,7 @@
     --accent-ink: #f7d556;
     --good-soft: #0f2c22;
     --good-ink: #5fd3a2;
+    --danger-ink: #ff7385;
   }
 }
 
@@ -92,6 +95,49 @@ body {
     repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)
       left center / 100% 3px no-repeat,
     var(--brand);
+}
+
+/* The road under the header: asphalt with a dashed centre line, stuck to the
+   top of the screen. The car on it is the page's scroll progress: it drives
+   from left to right as you read down. Browsers without scroll-driven
+   animations, and people who prefer reduced motion, see it parked. */
+.lane-road {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 24px;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)
+      left center / 100% 3px no-repeat,
+    var(--brand);
+}
+.lane-car {
+  position: absolute;
+  top: 1px;
+  left: 16px;
+  width: 22px;
+  height: 22px;
+  color: #ffffff;
+}
+@keyframes drive {
+  to {
+    transform: translateX(calc(100vw - 72px));
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .lane-car {
+      animation: drive linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+
+/* A lone dashed centre line, for joining steps on the landing page. */
+.lane-dash {
+  height: 3px;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px);
 }
 
 /* Links read like a painted marking: asphalt text, yellow underline. */

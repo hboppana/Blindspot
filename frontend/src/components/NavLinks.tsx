@@ -3,11 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { ListNumbers, MapTrifold } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 
 const LINKS = [
-  { href: "/", label: "City", match: (p: string) => p === "/" || p.startsWith("/intersections") },
-  { href: "/fix-list", label: "Fix list", match: (p: string) => p.startsWith("/fix-list") },
-  { href: "/backtest", label: "Backtest", match: (p: string) => p.startsWith("/backtest") },
+  {
+    href: "/map",
+    label: "City Map",
+    Icon: MapTrifold,
+    match: (p: string) => p.startsWith("/map") || p.startsWith("/intersections"),
+  },
+  {
+    href: "/fix-list",
+    label: "Wreck List",
+    Icon: ListNumbers,
+    match: (p: string) => p.startsWith("/fix-list") || p.startsWith("/backtest"),
+  },
 ];
 
 export function NavLinks() {
@@ -23,22 +34,15 @@ export function NavLinks() {
   }, [pathname]);
 
   return (
-    <nav ref={nav} className="flex gap-3 text-sm whitespace-nowrap sm:gap-5">
-      {LINKS.map((l) => {
-        const active = l.match(pathname);
-        return (
-          <Link
-            key={l.href}
-            href={l.href}
-            aria-current={active ? "page" : undefined}
-            className={`px-1 py-1.5 font-semibold transition-colors ${
-              active ? "text-accent" : "text-white/60 hover:text-white"
-            }`}
-          >
-            {l.label}
+    <nav ref={nav} className="ml-auto flex gap-0.5 whitespace-nowrap sm:gap-2">
+      {LINKS.map(({ href, label, Icon, match }) => (
+        <Button key={href} asChild variant="road" className="h-10 px-2.5 text-sm sm:h-12 sm:px-5 sm:text-lg">
+          <Link href={href} aria-current={match(pathname) ? "page" : undefined}>
+            <Icon weight="bold" aria-hidden className="hidden sm:block" />
+            {label}
           </Link>
-        );
-      })}
+        </Button>
+      ))}
     </nav>
   );
 }

@@ -79,7 +79,7 @@ export function groupByFix(fixes: { recommended_fix: string; crashes_per_year: n
   const groups = new Map<string, { count: number; perYear: number }>();
   for (const f of fixes) {
     const key = f.recommended_fix.startsWith("review needed")
-      ? "No single FHWA fix fits yet"
+      ? "Needs an engineer's review"
       : f.recommended_fix;
     const g = groups.get(key) ?? { count: 0, perYear: 0 };
     groups.set(key, { count: g.count + 1, perYear: g.perYear + f.crashes_per_year });
@@ -91,3 +91,26 @@ export function groupByFix(fixes: { recommended_fix: string; crashes_per_year: n
 
 /** Hour of day 0-23 -> "12 AM", "1 AM", ... "12 PM", ... "11 PM" */
 export const hour12 = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;
+
+/** Years covered by a "2022-01-01 to 2026-07-23" period, for per-year figures. */
+export function yearsIn(period: string) {
+  const [from, to] = period.split(" to ").map((d) => new Date(`${d}T12:00:00`).getTime());
+  return (to - from) / (365.25 * 24 * 3600 * 1000);
+}
+
+/** Median crashes a year across intersections with at least one crash since 2022. */
+export function medianPerYear(items: { crashes_since_2022: number }[], years: number) {
+  const c = items.map((i) => i.crashes_since_2022).filter((n) => n > 0).sort((a, b) => a - b);
+  if (!c.length) return 0;
+  const mid = c.length / 2;
+  const median = c.length % 2 ? c[Math.floor(mid)] : (c[mid - 1] + c[mid]) / 2;
+  return median / years;
+}
+
+/** "14-26%" -> [0.14, 0.26]; "40%" -> [0.4, 0.4]; anything else -> null. */
+export function effectRange(value: string): [number, number] | null {
+  const m = value.match(/(\d+(?:\.\d+)?)\s*(?:-|to)?\s*(\d+(?:\.\d+)?)?\s*%/);
+  if (!m) return null;
+  const lo = Number(m[1]) / 100;
+  return [lo, m[2] ? Number(m[2]) / 100 : lo];
+}

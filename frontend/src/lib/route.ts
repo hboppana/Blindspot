@@ -1,9 +1,9 @@
 // Which intersections a route passes through, and how their crash records
 // compare. Pure functions over the intersection list the city page already has.
 import type { IntersectionListItem } from "./types";
+import { type Grade, GRADES, gradeOf } from "./grade";
 
 export type TravelMode = "DRIVING" | "WALKING" | "BICYCLING";
-export type Danger = "high" | "elevated" | "none";
 
 export interface LatLng {
   lat: number;
@@ -12,14 +12,14 @@ export interface LatLng {
 
 export interface RouteHit {
   intersection: IntersectionListItem;
-  danger: Danger;
+  grade: Grade | null;
   metresAlong: number; // distance from the start, for ordering
 }
 
 export interface RouteSummary {
   intersections: number;
-  high: number;
-  elevated: number;
+  byGrade: Record<Grade, number>;
+  ungraded: number;
   crashesSince2022: number;
 }
 
@@ -38,7 +38,6 @@ const toXY = (p: LatLng) => ({ x: p.lng * M_PER_DEG_LON, y: p.lat * M_PER_DEG_LA
 export function intersectionsOnRoute(
   path: LatLng[],
   intersections: IntersectionListItem[],
-  mode: TravelMode,
   toleranceM = 30,
 ): RouteHit[] {
   if (path.length < 2) return [];
@@ -77,44 +76,38 @@ export function intersectionsOnRoute(
       }
     }
     if (best <= toleranceM)
-      hits.push({ intersection: i, danger: dangerLevel(i, mode), metresAlong: along });
+      hits.push({ intersection: i, grade: gradeOf(i), metresAlong: along });
   }
   return hits.sort((a, b) => a.metresAlong - b.metresAlong);
 }
 
-/**
- * High: on the fix list or in the top 50 citywide by crashes above similar
- * corners. Elevated: more crashes than similar corners, 25+ crashes since
- * 2022, or (walking/biking) any pedestrian/bike crash since 2022.
- */
-export function dangerLevel(i: IntersectionListItem, mode: TravelMode): Danger {
-  if (i.in_fix_list || (i.screening_rank != null && i.screening_rank <= 50)) return "high";
-  if ((i.excess_per_year ?? 0) >= 1 || i.crashes_since_2022 >= 25) return "elevated";
-  if (mode === "WALKING" && (i.pedestrian_crashes ?? 0) > 0) return "elevated";
-  if (mode === "BICYCLING" && (i.bicycle_crashes ?? 0) > 0) return "elevated";
-  return "none";
-}
-
 export function summarizeRoute(hits: RouteHit[]): RouteSummary {
+  const byGrade = Object.fromEntries(GRADES.map((g) => [g.grade, 0])) as Record<Grade, number>;
+  for (const h of hits) if (h.grade) byGrade[h.grade]++;
   return {
     intersections: hits.length,
-    high: hits.filter((h) => h.danger === "high").length,
-    elevated: hits.filter((h) => h.danger === "elevated").length,
+    byGrade,
+    ungraded: hits.filter((h) => !h.grade).length,
     crashesSince2022: hits.reduce((n, h) => n + h.intersection.crashes_since_2022, 0),
   };
 }
 
-/** Index of the route passing the fewest dangerous intersections (then the shortest). */
+/** Index of the safest route: fewest F intersections, then D, then C, then the quickest. */
 export function saferRouteIndex(
   routes: { summary: RouteSummary; durationMillis: number }[],
 ): number {
+  const key = (x: (typeof routes)[number]) => [
+    x.summary.byGrade.F,
+    x.summary.byGrade.D,
+    x.summary.byGrade.C,
+    x.durationMillis,
+  ];
   let best = 0;
   routes.forEach((r, k) => {
-    const b = routes[best];
-    const key = (x: typeof r) => [x.summary.high, x.summary.elevated, x.durationMillis];
-    const [h1, e1, d1] = key(r);
-    const [h2, e2, d2] = key(b);
-    if (h1 < h2 || (h1 === h2 && (e1 < e2 || (e1 === e2 && d1 < d2)))) best = k;
+    const a = key(r);
+    const b = key(routes[best]);
+    const i = a.findIndex((v, n) => v !== b[n]);
+    if (i !== -1 && a[i] < b[i]) best = k;
   });
   return best;
 }

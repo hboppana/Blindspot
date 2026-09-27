@@ -1,113 +1,187 @@
 import Link from "next/link";
-import { getCitySummary, getFixList } from "@/lib/api";
-import { factorLabel, groupByFix, monthYear, num } from "@/lib/format";
+import { ArrowRight } from "@phosphor-icons/react/ssr";
+import { getCitySummary, getFixList, getIntersections } from "@/lib/api";
+import type { FixListItem } from "@/lib/types";
+import { displayName, factorLabel, groupByFix, medianPerYear, monthYear, num, yearsIn } from "@/lib/format";
+import { GradeChip } from "@/components/GradeChip";
+import { CrashScale } from "@/components/viz/CrashScale";
+import { NumberTicker } from "@/components/viz/NumberTicker";
+import { TrafficLight } from "@/components/viz/TrafficLight";
 
-// Each bar splits crashes a year into what a similar corner sees (grey) and
-// the excess above it (lane yellow), so the reason a corner is on the list is
-// visible at a glance. Values are always printed next to the bar.
-const EXPECTED = "var(--baseline)";
-const EXCESS = "var(--accent)";
+// The Wreck List: the ten intersections with the most crashes beyond what a
+// similar intersection sees. One screen says how bad (the signal and three
+// figures); one ranked list says who and by how much (each row on the same
+// crash scale); the fixes close it, drawn as highway guide signs.
 
-export default async function FixListPage() {
-  const [{ summary: s }, fixes] = await Promise.all([getCitySummary(), getFixList()]);
-  const max = Math.max(...fixes.map((f) => f.crashes_per_year), 1);
+const REVIEW = "Needs an engineer's review";
+const reviewNeeded = (f: FixListItem) => f.recommended_fix.startsWith("review needed");
+const fixText = (f: FixListItem) => (reviewNeeded(f) ? REVIEW : f.recommended_fix);
+const similarPerYear = (f: FixListItem) => Math.max(f.crashes_per_year - f.excess_crashes_per_year, 0);
+const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
+
+export default async function WreckListPage() {
+  const [{ summary: s }, fixes, intersections] = await Promise.all([
+    getCitySummary(),
+    getFixList(),
+    getIntersections(),
+  ]);
+  const median = medianPerYear(intersections, yearsIn(s.period));
+  const max = Math.max(...fixes.map((f) => f.crashes_per_year), 1) * 1.04;
   const groups = groupByFix(fixes);
+  const provenFixes = groups.filter((g) => g.fix !== REVIEW);
+  const covered = fixes.filter((f) => !reviewNeeded(f)).length;
+  const through = monthYear(s.period.split(" to ")[1]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <header className="max-w-3xl">
-        <h1 className="text-3xl leading-tight font-extrabold tracking-tight">
-          Fix these {fixes.length} intersections to address {num(s.fix_list_crashes_per_year)} crashes a
-          year
-        </h1>
-        <p className="mt-2 text-muted">
-          {num(s.fix_list_excess_crashes_per_year)} of those are more than similar corners see. Averaged
-          from January 2022 to {monthYear(s.period.split(" to ")[1])}.
-        </p>
-        <Link href="/backtest" className="road-link mt-3 inline-block text-sm font-semibold">
-          Would we have caught these before 2022?
+    <div className="mx-auto max-w-6xl px-4 pt-10 pb-16 sm:px-6 md:pt-12">
+      {/* How bad */}
+      <section className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div>
+          <h1 className="rise text-5xl leading-none font-extrabold tracking-tight sm:text-6xl" style={stagger(0)}>
+            The Wreck List
+          </h1>
+          <p className="rise mt-4 max-w-[50ch] text-lg text-muted" style={stagger(1)}>
+            The {fixes.length} Gainesville intersections with the most crashes beyond what they should have. Fixing
+            these first does the most good.
+          </p>
+        </div>
+        <div className="rise flex items-center gap-6" style={stagger(2)}>
+          <TrafficLight lit="red" size="lg" />
+          <dl className="grid gap-3">
+            <div className="flex items-baseline gap-3">
+              <dt className="sr-only">Crashes a year at these intersections</dt>
+              <dd className="w-20 text-right text-3xl font-extrabold">
+                <NumberTicker value={s.fix_list_crashes_per_year} />
+              </dd>
+              <dd className="text-muted">crashes a year, together</dd>
+            </div>
+            <div className="flex items-baseline gap-3">
+              <dt className="sr-only">Crashes above what similar intersections see</dt>
+              <dd className="w-20 text-right text-3xl font-extrabold text-danger-ink">
+                <NumberTicker value={s.fix_list_excess_crashes_per_year} />
+              </dd>
+              <dd className="text-muted">more than similar intersections</dd>
+            </div>
+            <div className="flex items-center gap-3">
+              <dt className="sr-only">Grade</dt>
+              <dd className="flex w-20 justify-end">
+                <GradeChip grade="F" size="lg" />
+              </dd>
+              <dd className="text-muted">all {fixes.length} graded F</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      {/* Who, and by how much */}
+      <section className="mt-12">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <h2 className="text-2xl font-extrabold tracking-tight">Crashes a year, worst first</h2>
+          <ul className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted">
+            <li className="flex items-center gap-2">
+              <span className="size-3.5 rounded-full bg-[#c8102e]" />
+              This intersection
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="size-3.5 rounded-full border-2 border-muted" />
+              A similar intersection
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="h-3.5 w-0.5 rounded-full bg-muted" />
+              Gainesville&apos;s median intersection ({median.toFixed(1)})
+            </li>
+          </ul>
+        </div>
+
+        <ol className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface">
+          {fixes.map((f, i) => {
+            const similar = similarPerYear(f);
+            const times = similar > 0 ? f.crashes_per_year / similar : null;
+            return (
+              <li key={f.id} className="reveal border-line not-first:border-t not-first:border-dashed" style={stagger(i)}>
+                <Link
+                  href={`/intersections/${f.id}`}
+                  className="group grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3.5 transition-colors hover:bg-brand-soft md:grid-cols-[2.75rem_minmax(0,17rem)_minmax(0,1fr)_7.5rem] md:gap-x-6 md:px-5"
+                >
+                  <RankSign rank={f.rank} />
+                  <span className="min-w-0">
+                    <span className="block truncate font-bold decoration-accent decoration-2 underline-offset-4 group-hover:underline">
+                      {displayName(f.name)}
+                    </span>
+                    <span className="block truncate text-sm text-muted">
+                      Mostly {factorLabel(f.main_factor).toLowerCase()} crashes. Fix:{" "}
+                      <span className={reviewNeeded(f) ? "italic" : "text-foreground"}>{fixText(f)}</span>
+                    </span>
+                  </span>
+                  {/* On phones the scale drops to its own row under the name. */}
+                  <span className="col-span-3 row-start-2 md:col-span-1 md:col-start-3 md:row-start-1">
+                    <CrashScale value={f.crashes_per_year} similar={similar} median={median} max={max} />
+                  </span>
+                  <span className="text-right leading-tight">
+                    <span className="block text-lg font-extrabold tabular-nums">{f.crashes_per_year} a year</span>
+                    {times && (
+                      <span className="block text-sm font-semibold text-danger-ink">{times.toFixed(1)}× similar</span>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
+      {/* What fixing them takes */}
+      <section className="mt-12">
+        <h2 className="text-2xl font-extrabold tracking-tight">
+          {provenFixes.length} proven {provenFixes.length === 1 ? "fix covers" : "fixes cover"}{" "}
+          {covered === fixes.length ? `all ${fixes.length}` : `${covered} of the ${fixes.length}`}
+        </h2>
+        <p className="mt-1 text-muted">Each is matched to the kind of crash that keeps happening there.</p>
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {groups.map((g, i) =>
+            g.fix === REVIEW ? (
+              <li key={g.fix} className="reveal rounded-xl border border-dashed border-line p-1.5" style={stagger(i)}>
+                <div className="h-full rounded-lg p-4">
+                  <p className="font-bold">{g.fix}</p>
+                  <p className="mt-3 text-sm text-muted">
+                    {g.count} {g.count === 1 ? "intersection" : "intersections"} where no single fix fits,{" "}
+                    {num(g.perYear)} crashes a year
+                  </p>
+                </div>
+              </li>
+            ) : (
+              // Drawn like a highway guide sign: green panel, white inset border.
+              <li key={g.fix} className="reveal rounded-xl bg-[#00613a] p-1.5 text-white" style={stagger(i)}>
+                <div className="flex h-full flex-col rounded-lg border-2 border-white/85 p-4">
+                  <p className="leading-snug font-bold">{g.fix}</p>
+                  <p className="mt-auto pt-3 text-sm text-white/80">
+                    <span className="text-xl font-extrabold text-white tabular-nums">{g.count}</span>{" "}
+                    {g.count === 1 ? "intersection" : "intersections"}, {num(g.perYear)} crashes a year
+                  </p>
+                </div>
+              </li>
+            ),
+          )}
+        </ul>
+      </section>
+
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6 text-sm text-muted">
+        <p>Crashes averaged from January 2022 to {through}. Crash data from dataGNV.</p>
+        <Link href="/backtest" className="inline-flex items-center gap-1.5 font-semibold text-foreground hover:underline">
+          Would we have caught these before 2022? How We Tested This
+          <ArrowRight weight="bold" aria-hidden />
         </Link>
-      </header>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <section className="rounded-md border border-line bg-surface">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
-            <h2 className="text-sm font-bold">Ranked by crashes above similar corners</h2>
-            <ul className="flex gap-4 text-xs text-muted">
-              <li className="flex items-center gap-1.5">
-                <span className="h-2 w-3 rounded-full" style={{ background: EXPECTED }} />
-                What a similar corner sees
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-2 w-3 rounded-full" style={{ background: EXCESS }} />
-                Above similar corners
-              </li>
-            </ul>
-          </div>
-
-          <ol>
-            {fixes.map((f, i) => {
-              const expected = Math.max(f.crashes_per_year - f.excess_crashes_per_year, 0);
-              const review = f.recommended_fix.startsWith("review needed");
-              return (
-                <li key={f.id} className="rise border-b border-line last:border-0" style={{ "--i": i } as React.CSSProperties}>
-                  <Link
-                    href={`/intersections/${f.id}`}
-                    className="group grid grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-4 px-5 py-4 transition-colors duration-150 hover:bg-brand-soft"
-                  >
-                    <span className="grid h-7 w-7 place-items-center rounded bg-brand text-sm font-bold text-white tabular-nums">
-                      {f.rank}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-bold decoration-accent decoration-2 underline-offset-[3px] group-hover:underline">
-                        {f.name}
-                      </span>
-                      <span className={`mt-0.5 block text-sm ${review ? "text-muted italic" : ""}`}>
-                        {review ? "Needs an engineer's review: no single FHWA fix fits" : f.recommended_fix}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-muted">
-                        Most common crash: {factorLabel(f.main_factor).toLowerCase()}
-                      </span>
-                      <span
-                        className="grow-x mt-2.5 flex h-2 gap-0.5"
-                        style={{ width: `${(f.crashes_per_year / max) * 100}%`, "--i": i } as React.CSSProperties}
-                        aria-hidden
-                      >
-                        <span className="rounded-l-full" style={{ flex: expected, background: EXPECTED }} />
-                        <span className="rounded-r-full" style={{ flex: f.excess_crashes_per_year, background: EXCESS }} />
-                      </span>
-                    </span>
-                    <span className="text-right">
-                      <span className="block text-lg leading-tight font-extrabold tabular-nums">
-                        {f.crashes_per_year}
-                      </span>
-                      <span className="block text-xs text-muted">a year</span>
-                      <span className="mt-1 block text-xs font-semibold tabular-nums text-accent-ink">
-                        +{f.excess_crashes_per_year} above
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-
-        <aside style={{ "--i": 3 } as React.CSSProperties} className="rise self-start border-t border-line pt-5 lg:sticky lg:top-6 lg:border-t-0 lg:pt-0">
-          <h2 className="text-xl font-extrabold tracking-tight">By recommended fix</h2>
-          <ol className="mt-4 divide-y divide-line">
-            {groups.map((g) => (
-              <li key={g.fix} className="py-3 first:pt-0">
-                <p className="text-sm leading-snug font-semibold">{g.fix}</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {g.count} {g.count === 1 ? "intersection" : "intersections"},{" "}
-                  <span className="font-semibold text-foreground">{num(g.perYear)} crashes a year</span>
-                </p>
-              </li>
-            ))}
-          </ol>
-        </aside>
       </div>
     </div>
+  );
+}
+
+// The rank on a yellow diamond warning sign.
+function RankSign({ rank }: { rank: number }) {
+  return (
+    <span className="relative grid size-11 place-items-center" aria-label={`Rank ${rank}`}>
+      <span className="absolute inset-[6px] rotate-45 rounded-[5px] bg-accent ring-2 ring-[#1f2226] ring-inset" />
+      <span className="relative text-sm font-extrabold text-[#1f2226] tabular-nums">{rank}</span>
+    </span>
   );
 }

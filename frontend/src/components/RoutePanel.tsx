@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useMapsLibrary } from "@vis.gl/react-google-maps";
+import { Bicycle, Car, PersonSimpleWalk } from "@phosphor-icons/react";
 import type { IntersectionListItem } from "@/lib/types";
 import { GAINESVILLE, num } from "@/lib/format";
 import {
-  type Danger,
   type LatLng,
   type RouteHit,
   type RouteSummary,
@@ -16,8 +16,10 @@ import {
   saferRouteIndex,
   summarizeRoute,
 } from "@/lib/route";
+import { Button } from "@/components/ui/button";
+import { GRADES } from "@/lib/grade";
+import { GradeChip } from "./GradeChip";
 import { PlaceInput, type PickedPlace } from "./PlaceInput";
-import { IntersectionRow } from "./IntersectionRow";
 
 export interface PlannedRoute {
   path: LatLng[];
@@ -28,10 +30,13 @@ export interface PlannedRoute {
   summary: RouteSummary;
 }
 
-const MODES: { mode: TravelMode; label: string }[] = [
-  { mode: "DRIVING", label: "Drive" },
-  { mode: "WALKING", label: "Walk" },
-  { mode: "BICYCLING", label: "Bike" },
+// Routes for every way of travelling, found in one go so they can be compared.
+export type RoutePlan = Record<TravelMode, PlannedRoute[]>;
+
+export const MODES: { mode: TravelMode; label: string; Icon: typeof Car }[] = [
+  { mode: "DRIVING", label: "Drive", Icon: Car },
+  { mode: "WALKING", label: "Walk", Icon: PersonSimpleWalk },
+  { mode: "BICYCLING", label: "Bike", Icon: Bicycle },
 ];
 
 const COVERAGE_M = 25_000; // crash data covers Gainesville only
@@ -39,117 +44,105 @@ const COVERAGE_M = 25_000; // crash data covers Gainesville only
 const metresFromCity = (p: LatLng) =>
   Math.hypot((p.lat - GAINESVILLE.lat) * 110_860, (p.lng - GAINESVILLE.lng) * 96_800);
 
+const refused = (text: string) =>
+  /not (been used|enabled)|PERMISSION_DENIED|ApiNotActivated|ApiTargetBlocked|blocked|403/i.test(text);
+
 export function RoutePanel({
   intersections,
-  routes,
-  onRoutes,
+  plan,
+  onPlan,
+  mode,
+  onMode,
   selectedRoute,
   onSelectRoute,
-  selectedId,
-  onSelect,
 }: {
   intersections: IntersectionListItem[];
-  routes: PlannedRoute[];
-  onRoutes: (routes: PlannedRoute[]) => void;
+  plan: RoutePlan | null;
+  onPlan: (plan: RoutePlan | null, mode: TravelMode) => void;
+  mode: TravelMode;
+  onMode: (mode: TravelMode) => void;
   selectedRoute: number;
   onSelectRoute: (k: number) => void;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
 }) {
   const routesLib = useMapsLibrary("routes");
   const [from, setFrom] = useState<PickedPlace | null>(null);
   const [to, setTo] = useState<PickedPlace | null>(null);
-  const [mode, setMode] = useState<TravelMode>("DRIVING");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
-  async function findRoute(travelMode = mode) {
+  async function routesFor(travelMode: TravelMode): Promise<PlannedRoute[]> {
+    const { routes: found } = await routesLib!.Route.computeRoutes({
+      origin: from!.location,
+      destination: to!.location,
+      travelMode,
+      computeAlternativeRoutes: true,
+      fields: ["path", "durationMillis", "distanceMeters", "warnings"],
+    });
+    return (found ?? []).slice(0, 3).map((r) => {
+      const path = (r.path ?? []).map((p) => ({ lat: p.lat, lng: p.lng }));
+      const hits = intersectionsOnRoute(path, intersections);
+      return {
+        path,
+        durationMillis: r.durationMillis ?? 0,
+        distanceMeters: r.distanceMeters ?? 0,
+        warnings: r.warnings ?? [],
+        hits,
+        summary: summarizeRoute(hits),
+      };
+    });
+  }
+
+  async function findRoutes() {
     if (!routesLib || !from || !to) return;
     setStatus("loading");
     setMessage(null);
-    try {
-      const { routes: found } = await routesLib.Route.computeRoutes({
-        origin: from.location,
-        destination: to.location,
-        travelMode,
-        computeAlternativeRoutes: true,
-        fields: ["path", "durationMillis", "distanceMeters", "warnings"],
-      });
-      const planned = (found ?? []).slice(0, 3).map((r) => {
-        const path = (r.path ?? []).map((p) => ({ lat: p.lat, lng: p.lng }));
-        const hits = intersectionsOnRoute(path, intersections, travelMode);
-        return {
-          path,
-          durationMillis: r.durationMillis ?? 0,
-          distanceMeters: r.distanceMeters ?? 0,
-          warnings: r.warnings ?? [],
-          hits,
-          summary: summarizeRoute(hits),
-        };
-      });
-      if (!planned.length) {
-        setMessage("Google found no route between these places for this way of travelling.");
-      } else if (
-        metresFromCity(from.location) > COVERAGE_M ||
-        metresFromCity(to.location) > COVERAGE_M
-      ) {
-        setMessage("Crash data covers Gainesville only; parts of this route outside the city aren't checked.");
-      }
-      onRoutes(planned);
-      onSelectRoute(0);
-      setStatus("idle");
-    } catch (err) {
-      const text = String((err as Error)?.message ?? err);
+    // One mode failing (no bike route, say) shouldn't hide the others.
+    const settled = await Promise.allSettled(MODES.map((m) => routesFor(m.mode)));
+    const next = Object.fromEntries(
+      MODES.map((m, k) => [m.mode, settled[k].status === "fulfilled" ? settled[k].value : []]),
+    ) as RoutePlan;
+    const firstError = settled.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+    const any = MODES.some((m) => next[m.mode].length);
+
+    if (!any) {
+      const text = String(firstError?.reason?.message ?? firstError?.reason ?? "");
       setMessage(
-        /not (been used|enabled)|PERMISSION_DENIED|ApiNotActivated|ApiTargetBlocked|blocked|403/i.test(text)
-          ? "Google refused the route request. Enable Routes API in the Cloud project and tick it on the browser key."
-          : `Couldn't get a route: ${text}`,
+        !firstError
+          ? "Google found no route between these places."
+          : refused(text)
+            ? "Google refused the route request. Enable Routes API in the Cloud project and tick it on the browser key."
+            : `Couldn't get a route: ${text}`,
       );
-      onRoutes([]);
+      onPlan(null, mode);
       setStatus("error");
+      return;
     }
+    if (metresFromCity(from.location) > COVERAGE_M || metresFromCity(to.location) > COVERAGE_M)
+      setMessage("Crash data covers Gainesville only; parts of this route outside the city aren't checked.");
+    // Stay on the chosen mode if it has a route, else the first one that does.
+    onPlan(next, next[mode].length ? mode : MODES.find((m) => next[m.mode].length)!.mode);
+    setStatus("idle");
   }
 
+  const routes = plan?.[mode] ?? [];
   const safer = routes.length > 1 ? saferRouteIndex(routes) : 0;
   const fastest = routes.reduce(
     (best, r, k) => (r.durationMillis < routes[best].durationMillis ? k : best),
     0,
   );
-  const current = routes[selectedRoute];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="space-y-3 border-b border-line px-4 py-3">
+    <div className="flex min-h-0 flex-col">
+      <div className="space-y-3 p-4">
         <PlaceInput label="From" placeholder="Your starting point" onPick={setFrom} />
         <PlaceInput label="To" placeholder="Where you're going" onPick={setTo} />
-
-        <div className="flex items-center gap-3">
-          <div role="radiogroup" aria-label="Travel mode" className="flex rounded-md ring-1 ring-line">
-            {MODES.map((m) => (
-              <button
-                key={m.mode}
-                role="radio"
-                aria-checked={mode === m.mode}
-                onClick={() => {
-                  setMode(m.mode);
-                  if (routes.length) findRoute(m.mode);
-                }}
-                className={`px-3 py-1.5 text-sm font-medium first:rounded-l-md last:rounded-r-md transition-colors ${
-                  mode === m.mode ? "bg-brand text-white" : "hover:bg-brand-soft"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => findRoute()}
-            disabled={!from || !to || status === "loading" || !routesLib}
-            className="ml-auto rounded-md bg-accent px-3 py-1.5 text-sm font-bold text-[#1f2226] shadow-sm transition-colors hover:brightness-95 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {status === "loading" ? "Checking…" : "Check route"}
-          </button>
-        </div>
+        <Button
+          onClick={findRoutes}
+          disabled={!from || !to || status === "loading" || !routesLib}
+          className="w-full"
+        >
+          {status === "loading" ? "Checking Routes…" : "Check Routes"}
+        </Button>
         {message && (
           <p role="status" className="text-sm text-accent-ink">
             {message}
@@ -157,133 +150,95 @@ export function RoutePanel({
         )}
       </div>
 
-      {routes.length > 0 && (
-        <div className="space-y-2 border-b border-line px-4 py-3">
-          {routes.map((r, k) => (
-            <button
-              key={k}
-              onClick={() => onSelectRoute(k)}
-              aria-pressed={k === selectedRoute}
-              className={`block w-full rounded-md px-3 py-2 text-left text-sm ring-1 transition-colors ${
-                k === selectedRoute ? "bg-accent-soft ring-accent" : "ring-line hover:bg-brand-soft"
-              }`}
-            >
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="font-bold">
-                  {formatDuration(r.durationMillis)} · {formatMiles(r.distanceMeters)}
-                </span>
-                {k === fastest && <Tag>Fastest</Tag>}
-                {routes.length > 1 && k === safer && k !== fastest && (
-                  <Tag>Passes fewer dangerous intersections</Tag>
-                )}
-              </span>
-              <span className="mt-1 block">
-                <DangerCount n={r.summary.high} danger="high" />{" "}
-                <DangerCount n={r.summary.elevated} danger="elevated" />
-              </span>
-              <span className="block text-xs text-muted">
-                {num(r.summary.crashesSince2022)} crashes since 2022 at the{" "}
-                {r.summary.intersections} intersections it passes
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {current && (
-        <>
-          <div className="flex items-baseline justify-between px-4 pt-2.5 pb-1">
-            <h3 className="text-sm font-bold">Intersections on this route</h3>
-            <span className="text-xs text-muted">in order</span>
+      {/* Only the results scroll: a scrolling panel would clip the address suggestions. */}
+      {plan && (
+        <div className="min-h-0 overflow-y-auto border-t border-line p-4">
+          <div role="radiogroup" aria-label="Travel mode" className="grid grid-cols-3 gap-1 rounded-full bg-brand-soft p-1">
+            {MODES.map(({ mode: m, label, Icon }) => {
+              const best = plan[m][0];
+              return (
+                <button
+                  key={m}
+                  role="radio"
+                  aria-checked={mode === m}
+                  disabled={!best}
+                  onClick={() => onMode(m)}
+                  className={`flex flex-col items-center rounded-full px-2 py-1.5 text-xs font-bold transition-colors disabled:opacity-40 ${
+                    mode === m ? "bg-brand text-white shadow-sm" : "hover:bg-surface"
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <Icon weight="bold" aria-hidden className="size-4" />
+                    {label}
+                  </span>
+                  <span className={`font-medium tabular-nums ${mode === m ? "text-white/70" : "text-muted"}`}>
+                    {best ? formatDuration(Math.min(...plan[m].map((r) => r.durationMillis))) : "No route"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          <ol className="min-h-0 flex-1 overflow-y-auto max-md:max-h-[60vh]">
-            {current.hits.map((h) => (
-              <IntersectionRow
-                key={h.intersection.id}
-                i={h.intersection}
-                selected={h.intersection.id === selectedId}
-                onSelect={onSelect}
-                lead={<DangerBadge danger={h.danger} />}
-                detail={vulnerableDetail(h.intersection, mode)}
-              />
-            ))}
-          </ol>
-          {current.hits.length === 0 && (
-            <p className="px-4 py-4 text-sm text-muted">
-              This route doesn&apos;t pass any intersection with a crash record.
-            </p>
-          )}
-          {current.warnings.length > 0 && (
-            <p className="border-t border-line px-4 py-2 text-xs text-muted">
-              Google: {current.warnings.join(" ")}
-            </p>
-          )}
-        </>
-      )}
 
-      {!routes.length && status !== "error" && (
-        <p className="px-4 py-4 text-sm text-muted">
-          Pick a start and a destination to see which intersections along the way
-          have a bad crash record. High: on the fix list or in the city&apos;s worst 50.
-          Above average: more crashes than similar corners.
-        </p>
+          <div className="mt-3 space-y-2">
+            {routes.map((r, k) => (
+              <button
+                key={k}
+                onClick={() => onSelectRoute(k)}
+                aria-pressed={k === selectedRoute}
+                className={`block w-full rounded-xl px-3 py-2.5 text-left text-sm ring-1 transition-colors ${
+                  k === selectedRoute ? "bg-accent-soft ring-accent" : "ring-line hover:bg-brand-soft"
+                }`}
+              >
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold">
+                    {formatDuration(r.durationMillis)}, {formatMiles(r.distanceMeters)}
+                  </span>
+                  {/* Both can land on one route: then it's the quickest and the safest. */}
+                  {routes.length > 1 && k === fastest && <Tag>Fastest</Tag>}
+                  {routes.length > 1 && k === safer && <Tag tone="safe">Safest</Tag>}
+                </span>
+                <GradeCounts summary={r.summary} />
+                <span className="mt-1.5 block text-xs text-muted">
+                  {r.summary.intersections} intersections, {num(r.summary.crashesSince2022)} crashes
+                  since 2022
+                </span>
+              </button>
+            ))}
+          </div>
+          {(routes[selectedRoute]?.warnings.length ?? 0) > 0 && (
+            <p className="mt-3 text-xs text-muted">Google: {routes[selectedRoute].warnings.join(" ")}</p>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-function vulnerableDetail(i: IntersectionListItem, mode: TravelMode) {
-  const n = mode === "WALKING" ? i.pedestrian_crashes : mode === "BICYCLING" ? i.bicycle_crashes : null;
-  if (!n) return undefined;
-  const what = mode === "WALKING" ? "pedestrian" : "bicycle";
+// How many intersections of each grade the route passes, worst first.
+function GradeCounts({ summary }: { summary: PlannedRoute["summary"] }) {
+  const shown = GRADES.filter((g) => summary.byGrade[g.grade] > 0);
+  if (!shown.length) return <span className="mt-1.5 block text-xs text-muted">No graded intersections</span>;
   return (
-    <span className="font-semibold text-accent-ink">
-      {n} {what} crash{n === 1 ? "" : "es"} since 2022
+    <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+      {shown.map((g) => (
+        <span key={g.grade} className="inline-flex items-center gap-1 font-semibold tabular-nums">
+          <GradeChip grade={g.grade} size="sm" />
+          {summary.byGrade[g.grade]}
+        </span>
+      ))}
     </span>
   );
 }
 
-function Tag({ children }: { children: React.ReactNode }) {
+// Fastest is neutral; Safest wears guide-sign green, the site's "this is good" colour.
+function Tag({ children, tone = "plain" }: { children: React.ReactNode; tone?: "plain" | "safe" }) {
   return (
-    <span className="rounded bg-good-soft px-1.5 py-0.5 text-xs font-semibold text-good-ink">
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+        tone === "safe" ? "bg-good-soft text-good-ink" : "bg-brand-soft text-foreground ring-1 ring-line"
+      }`}
+    >
       {children}
-    </span>
-  );
-}
-
-// Road-sign shapes carry the level alongside the label, so colour is never alone.
-function DangerIcon({ danger }: { danger: Danger }) {
-  if (danger === "high")
-    return (
-      <svg viewBox="0 0 20 20" className="inline h-4 w-4 align-[-3px]" aria-hidden>
-        <polygon points="6,1 14,1 19,6 19,14 14,19 6,19 1,14 1,6" fill="#c8102e" />
-      </svg>
-    );
-  if (danger === "elevated")
-    return (
-      <svg viewBox="0 0 20 20" className="inline h-4 w-4 align-[-3px]" aria-hidden>
-        <polygon points="10,1 19,10 10,19 1,10" fill="#f6c700" stroke="#1f2226" strokeWidth="1.5" />
-      </svg>
-    );
-  return null;
-}
-
-function DangerBadge({ danger }: { danger: Danger }) {
-  if (danger === "none") return <span className="text-muted">-</span>;
-  return (
-    <span className="flex flex-col items-start text-[10px] leading-tight font-bold uppercase">
-      <DangerIcon danger={danger} />
-      {danger === "high" ? "High" : "Above avg"}
-    </span>
-  );
-}
-
-function DangerCount({ n, danger }: { n: number; danger: Danger }) {
-  return (
-    <span className="mr-2 inline-flex items-center gap-1 whitespace-nowrap">
-      <DangerIcon danger={danger} />
-      <span className="font-semibold tabular-nums">{n}</span>
-      {danger === "high" ? "high-crash" : "above average"}
     </span>
   );
 }

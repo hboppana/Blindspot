@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ControlPosition, Map, MapControl, useMap } from "@vis.gl/react-google-maps";
+import Link from "next/link";
+import { ControlPosition, InfoWindow, Map, MapControl, useMap } from "@vis.gl/react-google-maps";
 import type { IntersectionListItem } from "@/lib/types";
-import { FACTOR_GROUPS, GAINESVILLE, factorGroup } from "@/lib/format";
+import { GAINESVILLE, displayName, factorGroup, factorLabel, num } from "@/lib/format";
+import { UNGRADED, gradeInfo, gradeOf, gradeReason } from "@/lib/grade";
+import { GradeChip } from "./GradeChip";
 import type { LatLng } from "@/lib/route";
+import { dotRadius } from "@/lib/dotSize";
 
-// Dot radius in px: a base size so low-crash corners stay easy to see and
-// click, plus a part that grows with crashes since 2022, so every corner is
-// still bigger than one with fewer crashes.
-const BASE_DOT_RADIUS = 5;
-const dotScale = (crashes: number) => BASE_DOT_RADIUS + Math.sqrt(crashes) * 0.75;
+// Finds the intersection dot under a pointer event. DotLayer fills it in;
+// RouteLayer asks it so a click on a dot sitting on a route line opens the dot.
+type DotAt = (ev: MouseEvent) => IntersectionListItem | null;
 
-export type CityMapView = "ranked" | "route";
+export type CityMapView = "city" | "route";
 
 // Zoomed out, only the corners with the most crashes are drawn. The cut-off
 // falls exponentially as you zoom in (divided by 2.5 per step), so each step
@@ -37,28 +39,27 @@ export function CityMap({
   shown,
   selectedId,
   onSelect,
+  onClose,
   view,
-  onToggleView,
   routes = [],
   selectedRoute = 0,
   onSelectRoute,
-  highDanger,
 }: {
   all: IntersectionListItem[]; // every intersection: dots are created once from this
   shown: IntersectionListItem[]; // what the current view and filters include
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onClose: () => void;
   view: CityMapView;
-  onToggleView: () => void;
   routes?: LatLng[][];
   selectedRoute?: number;
   onSelectRoute?: (k: number) => void;
-  highDanger?: Set<string>; // ids drawn with a heavy ring on the route view
 }) {
   const [zoom, setZoom] = useState(12);
-  const threshold = view === "ranked" ? minCrashesAtZoom(zoom) : 0;
+  const threshold = view === "city" ? minCrashesAtZoom(zoom) : 0;
+  const dotAt = useRef<DotAt | null>(null);
 
-  // Always keep the selected corner, fix-list corners and route danger visible.
+  // Always keep the selected corner and wreck-list corners visible.
   const visibleIds = useMemo(() => {
     const ids = new Set<string>();
     for (const i of shown)
@@ -66,72 +67,123 @@ export function CityMap({
         threshold === 0 ||
         i.crashes_since_2022 >= threshold ||
         i.in_fix_list ||
-        i.id === selectedId ||
-        highDanger?.has(i.id)
+        i.id === selectedId
       )
         ids.add(i.id);
     return ids;
-  }, [shown, threshold, selectedId, highDanger]);
+  }, [shown, threshold, selectedId]);
   const hidden = shown.length - visibleIds.size;
 
   return (
     <Map
       defaultCenter={GAINESVILLE}
       defaultZoom={12}
-      onZoomChanged={(e) => setZoom(Math.round(e.detail.zoom))}
-      gestureHandling="cooperative"
+      // The map is the whole page, so the wheel zooms without a modifier key.
+      gestureHandling="greedy"
       disableDefaultUI
       zoomControl
+      zoomControlOptions={{ position: ControlPosition.LEFT_BOTTOM }}
       clickableIcons={false}
       className="absolute inset-0"
     >
-      <MapControl position={ControlPosition.TOP_LEFT}>
-        <div className="m-2.5 flex gap-2">
-          <WholeCityButton />
-          <button
-            onClick={onToggleView}
-            aria-pressed={view === "route"}
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-bold text-[#1f2226] shadow transition-colors hover:brightness-95 active:translate-y-px"
-          >
-            {view === "ranked" ? "Plan a route" : "Ranked list"}
-          </button>
-        </div>
-      </MapControl>
       {hidden > 0 && (
         <MapControl position={ControlPosition.BOTTOM_CENTER}>
-          <p className="mb-2.5 rounded-md bg-surface/95 px-3 py-1.5 text-xs font-medium shadow ring-1 ring-line">
+          <p className="mx-16 mb-4 rounded-full bg-surface/95 px-4 py-2 text-center text-xs font-medium shadow ring-1 ring-line">
             Showing corners with {threshold}+ crashes. Zoom in to see{" "}
             {hidden.toLocaleString("en-US")} more.
           </p>
         </MapControl>
       )}
+      <ZoomWatcher onZoom={setZoom} />
       <DotLayer
+        dotAt={dotAt}
         all={all}
         visibleIds={visibleIds}
         threshold={threshold}
         selectedId={selectedId}
         onSelect={onSelect}
-        highDanger={highDanger}
       />
       {view === "route" && (
-        <RouteLayer routes={routes} selected={selectedRoute} onSelect={onSelectRoute} />
+        <RouteLayer
+          routes={routes}
+          selected={selectedRoute}
+          onSelect={onSelectRoute}
+          dotAt={dotAt}
+          onSelectDot={onSelect}
+        />
       )}
+      <SelectedPopup all={all} selectedId={selectedId} onClose={onClose} />
     </Map>
   );
 }
 
-function WholeCityButton() {
+// Reads the zoom once the camera settles, so programmatic zooms (panning to a
+// selected corner, fitting a route) update the detail level too, not just the wheel.
+function ZoomWatcher({ onZoom }: { onZoom: (zoom: number) => void }) {
   const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const l = map.addListener("idle", () => onZoom(Math.round(map.getZoom() ?? 12)));
+    return () => l.remove();
+  }, [map, onZoom]);
+  return null;
+}
+
+// The selected intersection's grade, record and a way into its report.
+// Google draws the bubble white in both colour schemes, so text is set dark.
+function SelectedPopup({
+  all,
+  selectedId,
+  onClose,
+}: {
+  all: IntersectionListItem[];
+  selectedId: string | null;
+  onClose: () => void;
+}) {
+  const i = useMemo(() => all.find((x) => x.id === selectedId), [all, selectedId]);
+  if (!i) return null;
+  const g = factorGroup(i);
+  const grade = gradeOf(i);
   return (
-    <button
-      onClick={() => {
-        map?.panTo(GAINESVILLE);
-        map?.setZoom(12);
-      }}
-      className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white shadow transition-colors hover:bg-brand-hover active:translate-y-px"
+    <InfoWindow
+      position={{ lat: i.lat, lng: i.lon }}
+      pixelOffset={[0, -dotRadius(i.crashes_since_2022)]}
+      headerContent={<p className="pr-2 text-base leading-snug font-extrabold text-[#1f2226]">{displayName(i.name)}</p>}
+      onCloseClick={onClose}
+      shouldFocus={false}
+      minWidth={220}
     >
-      Whole city
-    </button>
+      <div className="font-sans text-sm text-[#1f2226]">
+        <div className="flex items-center gap-2.5">
+          <GradeChip grade={grade} size="lg" />
+          <p className="leading-snug">
+            <span className="block font-bold">{grade ? `Grade ${grade}` : "Not graded"}</span>
+            <span className="text-[#52514e]">{gradeReason(i)}</span>
+          </p>
+        </div>
+        <p className="mt-2.5">
+          <span className="font-bold tabular-nums">{num(i.crashes_since_2022)}</span> crashes since 2022
+          {g !== "none" && <>, mostly {factorLabel(i.main_factor).toLowerCase()}</>}
+        </p>
+        {((i.pedestrian_crashes ?? 0) > 0 || (i.bicycle_crashes ?? 0) > 0) && (
+          <p className="text-[#52514e]">
+            {[
+              i.pedestrian_crashes ? `${i.pedestrian_crashes} involving pedestrians` : null,
+              i.bicycle_crashes ? `${i.bicycle_crashes} involving bikes` : null,
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </p>
+        )}
+        {i.in_fix_list && <p className="mt-1 font-semibold text-[#6b5200]">On the Wreck List</p>}
+        <Link
+          href={`/intersections/${i.id}`}
+          className="mt-3 inline-flex h-8 items-center rounded-full bg-[#1f2226] px-3.5 text-sm font-bold text-white transition-colors hover:bg-[#353a40]"
+        >
+          View Report
+        </Link>
+      </div>
+    </InfoWindow>
   );
 }
 
@@ -140,12 +192,12 @@ function WholeCityButton() {
 // (100-400 ms of freezing); a canvas redraw of every dot takes ~1 ms.
 // Clicks and hover find the dot under the pointer themselves.
 interface DotProps {
+  dotAt: React.RefObject<DotAt | null>;
   all: IntersectionListItem[];
   visibleIds: Set<string>;
   threshold: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
-  highDanger?: Set<string>;
 }
 
 interface Drawn {
@@ -156,7 +208,7 @@ interface Drawn {
 }
 
 function DotLayer(props: DotProps) {
-  const { all, visibleIds, threshold, selectedId, highDanger } = props;
+  const { all, visibleIds, threshold, selectedId } = props;
   const map = useMap();
   const latest = useRef(props);
   const redrawRef = useRef<(() => void) | null>(null);
@@ -170,7 +222,10 @@ function DotLayer(props: DotProps) {
     () =>
       [...all]
         .sort((a, b) => b.crashes_since_2022 - a.crashes_since_2022)
-        .map((i) => ({ i, color: FACTOR_GROUPS[factorGroup(i)].color, r: dotScale(i.crashes_since_2022) })),
+        .map((i) => {
+          const g = gradeOf(i);
+          return { i, color: g ? gradeInfo(g).color : UNGRADED.color, r: dotRadius(i.crashes_since_2022) };
+        }),
     [all],
   );
   const orderedRef = useRef(ordered);
@@ -185,13 +240,23 @@ function DotLayer(props: DotProps) {
     canvas.style.pointerEvents = "none";
     const tip = document.createElement("div");
     tip.className =
-      "pointer-events-none absolute z-10 hidden rounded-md bg-surface px-2 py-1 text-xs font-medium text-foreground shadow ring-1 ring-line";
+      "pointer-events-none absolute z-10 hidden max-w-64 rounded-xl bg-surface px-3 py-2 text-xs text-foreground shadow-lg ring-1 ring-line";
+    const tipTitle = document.createElement("p");
+    tipTitle.className = "text-sm font-bold";
+    const tipGrade = document.createElement("p");
+    tipGrade.className = "mt-0.5";
+    const tipHint = document.createElement("p");
+    tipHint.className = "mt-1 font-semibold text-accent-ink";
+    tipHint.textContent = "Click to View Report";
+    tip.append(tipTitle, tipGrade, tipHint);
     map.getDiv().appendChild(tip);
     let drawn: Drawn[] = [];
 
     class CanvasDots extends google.maps.OverlayView {
       onAdd() {
-        this.getPanes()?.overlayLayer.appendChild(canvas);
+        // Above the pane route lines are drawn in, so dots always sit on top of
+        // them. The canvas ignores the pointer; clicks are hit-tested below.
+        this.getPanes()?.overlayMouseTarget.appendChild(canvas);
       }
       onRemove() {
         canvas.remove();
@@ -199,7 +264,7 @@ function DotLayer(props: DotProps) {
       draw() {
         const proj = this.getProjection();
         if (!proj) return;
-        const { visibleIds, threshold, selectedId, highDanger } = latest.current;
+        const { visibleIds, threshold, selectedId } = latest.current;
         const box = map!.getDiv();
         const w = box.clientWidth;
         const h = box.clientHeight;
@@ -228,7 +293,7 @@ function DotLayer(props: DotProps) {
           const p = proj.fromLatLngToContainerPixel(new google.maps.LatLng(d.i.lat, d.i.lon));
           if (!p || p.x < -d.r || p.y < -d.r || p.x > w + d.r || p.y > h + d.r) continue;
           const selected = d.i.id === selectedId;
-          const ringed = d.i.in_fix_list || (highDanger?.has(d.i.id) ?? false);
+          const ringed = d.i.in_fix_list;
           const item = { i: d.i, x: p.x, y: p.y, r: d.r };
           if (selected || ringed) {
             top.push({ ...item, color: d.color, selected });
@@ -245,7 +310,7 @@ function DotLayer(props: DotProps) {
           ctx.stroke();
           plain.push(item);
         }
-        // Fix-list, route-danger and selected dots on top, fully opaque.
+        // Wreck-list and selected dots on top, fully opaque.
         top.sort((a, b) => Number(a.selected) - Number(b.selected));
         for (const d of top) {
           ctx.globalAlpha = 0.95;
@@ -276,8 +341,8 @@ function DotLayer(props: DotProps) {
     redrawRef.current = redraw;
 
     // Topmost dot under the pointer (drawn last = on top).
-    const hit = (e: google.maps.MapMouseEvent) => {
-      const ev = e.domEvent as MouseEvent | undefined;
+    const hit = (e: google.maps.MapMouseEvent) => hitAt(e.domEvent as MouseEvent | undefined);
+    const hitAt = (ev: MouseEvent | undefined) => {
       if (!ev) return null;
       const rect = map.getDiv().getBoundingClientRect();
       const x = ev.clientX - rect.left;
@@ -288,8 +353,11 @@ function DotLayer(props: DotProps) {
       }
       return null;
     };
+    const { dotAt } = latest.current;
+    dotAt.current = (ev) => hitAt(ev)?.d.i ?? null;
     const listeners = [
       map.addListener("click", (e: google.maps.MapMouseEvent) => {
+        tip.classList.add("hidden");
         const h = hit(e);
         if (h) latest.current.onSelect(h.d.i.id);
       }),
@@ -300,14 +368,22 @@ function DotLayer(props: DotProps) {
           tip.classList.add("hidden");
           return;
         }
-        tip.textContent = `${h.d.i.name}: ${h.d.i.crashes_since_2022} crashes since 2022`;
+        const g = gradeOf(h.d.i);
+        tipTitle.textContent = displayName(h.d.i.name);
+        tipGrade.textContent = g
+          ? `Grade ${g}: ${gradeReason(h.d.i).toLowerCase()}`
+          : `Not graded, ${h.d.i.crashes_since_2022} crashes since 2022`;
         tip.style.left = `${h.x + 12}px`;
         tip.style.top = `${h.y + 12}px`;
         tip.classList.remove("hidden");
       }),
       map.addListener("mouseout", () => tip.classList.add("hidden")),
-      // Redraw while panning so newly revealed areas get their dots.
-      map.addListener("bounds_changed", redraw),
+      // Redraw while panning so newly revealed areas get their dots. The hover
+      // card belongs to a dot that is now moving, so it goes.
+      map.addListener("bounds_changed", () => {
+        tip.classList.add("hidden");
+        redraw();
+      }),
     ];
 
     return () => {
@@ -316,13 +392,14 @@ function DotLayer(props: DotProps) {
       layer.setMap(null);
       tip.remove();
       redrawRef.current = null;
+      dotAt.current = null;
     };
   }, [map]);
 
   // Any change to what's shown: one cheap redraw.
   useEffect(() => {
     redrawRef.current?.();
-  }, [ordered, visibleIds, threshold, selectedId, highDanger]);
+  }, [ordered, visibleIds, threshold, selectedId]);
 
   // Pan only when the selection changes, not when zoom changes what's visible.
   useEffect(() => {
@@ -342,10 +419,14 @@ function RouteLayer({
   routes,
   selected,
   onSelect,
+  dotAt,
+  onSelectDot,
 }: {
   routes: LatLng[][];
   selected: number;
   onSelect?: (k: number) => void;
+  dotAt: React.RefObject<DotAt | null>;
+  onSelectDot: (id: string) => void;
 }) {
   const map = useMap();
 
@@ -381,11 +462,18 @@ function RouteLayer({
         zIndex: isSelected ? 21 : 11,
         clickable: !isSelected,
       });
-      if (!isSelected && onSelect) line.addListener("click", () => onSelect(k));
+      // A clickable line takes the click before the map sees it, so check
+      // for a dot first: dots win over the route underneath.
+      if (!isSelected && onSelect)
+        line.addListener("click", (e: google.maps.PolyMouseEvent) => {
+          const dot = dotAt.current?.(e.domEvent as MouseEvent);
+          if (dot) onSelectDot(dot.id);
+          else onSelect(k);
+        });
       return [casing, line];
     });
     return () => lines.forEach((l) => l.setMap(null));
-  }, [map, routes, selected, onSelect]);
+  }, [map, routes, selected, onSelect, dotAt, onSelectDot]);
 
   return null;
 }
