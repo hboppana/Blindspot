@@ -1,10 +1,9 @@
-"""Snowflake Cortex text for the Fix Plan page: where to start, and a draft
-request letter per fix.
+"""Snowflake Cortex text for the Fix Plan page: a draft request letter per fix.
 
 The numbers are ours, the words are Cortex's. Every figure (crashes a year,
 crashes avoided, FHWA effects, costs) is computed here from the committed
 derived files, exactly as the Fix Plan page computes it. Cortex only turns
-those facts into a short summary and letters, and any text with a number that
+those facts into letters, and any text with a number that
 isn't in its facts is rejected (the same check as the Gemini case files).
 
 How it runs: the facts go into a Snowflake table (STREETSMART.CORTEX
@@ -41,7 +40,6 @@ OUT = DERIVED / "fix_plan_cortex.json"
 
 MODEL = "claude-sonnet-4-5"
 PROMPT_VERSION = 1
-PLAN_WORDS = 60
 LETTER_WORDS = 170
 SUBJECT_WORDS = 16
 REVIEW = "review needed"
@@ -79,12 +77,6 @@ Rules, all of them strict:
 - Plain, specific, calm language a resident would use. No marketing tone, no exclamation marks.
 - Answer with JSON only, matching the requested fields."""
 
-PLAN_PROMPT = """Write "summary": 2 or 3 sentences, at most {words} words, telling Gainesville where to start on its most dangerous intersections.
-Name the first fix in facts.plan (it has the biggest payoff) and say why to start there, using its cost and crashes avoided a year. Mention facts.total_crashes_avoided_a_year once. Do not list every fix.
-
-FACTS:
-{facts}"""
-
 LETTER_PROMPT = """Write a request letter from a Gainesville resident to the City of Gainesville's transportation and traffic engineering staff.
 - "subject": at most {subject_words} words.
 - "body": at most {words} words. Start with "Dear City of Gainesville Traffic Engineering staff," and end with "Sincerely," then a new line with "[Your name]".
@@ -101,7 +93,6 @@ ASK_REVIEW = ("Explain that the crashes there are a mix of kinds, so no single s
               "and ask the city for an engineering review of the intersection.")
 
 SCHEMAS = {
-    "plan": {"type": "object", "properties": {"summary": {"type": "string"}}, "required": ["summary"]},
     "letter": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}},
                "required": ["subject", "body"]},
 }
@@ -142,7 +133,7 @@ def span(lo, hi):
 
 
 def build_facts():
-    """[(kind, key, facts)] for the plan summary and one letter per fix (and the review case)."""
+    """[(kind, key, facts)]: one letter per fix, and one per intersection needing a review."""
     city = read_json(DERIVED / "city_summary.json")
     fixes = city["fix_list"]
     measures = read_json(REFERENCE / "countermeasures.json")["countermeasures"]
@@ -160,7 +151,7 @@ def build_facts():
         else:
             groups.setdefault(f["recommended_fix"], []).append(f)
 
-    rows, plan = [], []
+    rows = []
     for fix, members in groups.items():
         m = by_name.get(fix, {"effects": []})
         per_year = sum(x["crashes_per_year"] for x in members)
@@ -181,7 +172,6 @@ def build_facts():
             e = m["effects"][0]
             facts["fhwa_effect"] = f"{e['value']} {e['measure']}"
         rows.append(("letter", fix, facts))
-        plan.append({**facts, "_avoided_hi": per_year * rng[1] if rng else 0, "_avoided_lo": per_year * rng[0] if rng else 0})
 
     for f in reviews:
         rows.append(("letter", f["id"], {
@@ -190,24 +180,11 @@ def build_facts():
             "why_no_single_fix": "The crashes there are a mix of kinds, so no single standard fix fits.",
         }))
 
-    # The plan in payoff order, as the page shows it.
-    plan.sort(key=lambda g: -g["_avoided_hi"])
-    lo = sum(g["_avoided_lo"] for g in plan)
-    hi = sum(g["_avoided_hi"] for g in plan)
-    plan_facts = {
-        "plan": [{k: v for k, v in g.items() if not k.startswith("_")} for g in plan],
-        "total_crashes_avoided_a_year": span(lo, hi),
-        "red_list_intersections": len(fixes),
-        "covered_by_a_proven_fix": len(fixes) - len(reviews),
-    }
-    rows.insert(0, ("plan", "plan", plan_facts))
     return rows
 
 
 def prompt_for(kind, facts):
     body = json.dumps(facts, indent=1)
-    if kind == "plan":
-        return PLAN_PROMPT.format(words=PLAN_WORDS, facts=body)
     ask = ASK_REVIEW if facts["fix"] == "engineering review" else ASK_FIX
     return LETTER_PROMPT.format(words=LETTER_WORDS, subject_words=SUBJECT_WORDS, ask=ask, facts=body)
 
@@ -221,7 +198,7 @@ def words(text):
 
 def check(kind, answer, facts):
     """Problems with Cortex's answer, or [] if it passes."""
-    fields = ["summary"] if kind == "plan" else ["subject", "body"]
+    fields = ["subject", "body"]
     missing = [f for f in fields if not isinstance(answer.get(f), str) or not answer[f].strip()]
     if missing:
         return [f"missing fields: {', '.join(missing)}"]
@@ -236,13 +213,10 @@ def check(kind, answer, facts):
         problems.append(f"causal wording: '{CAUSAL.search(text).group(0)}'")
     if re.search(r"[\w.+-]+@[\w-]+\.\w+|https?://", text):
         problems.append("no emails or links")
-    if kind == "plan" and words(answer["summary"]) > PLAN_WORDS:
-        problems.append(f"summary is {words(answer['summary'])} words; at most {PLAN_WORDS}")
-    if kind == "letter":
-        if words(answer["body"]) > LETTER_WORDS:
-            problems.append(f"body is {words(answer['body'])} words; at most {LETTER_WORDS}")
-        if words(answer["subject"]) > SUBJECT_WORDS:
-            problems.append(f"subject is {words(answer['subject'])} words; at most {SUBJECT_WORDS}")
+    if words(answer["body"]) > LETTER_WORDS:
+        problems.append(f"body is {words(answer['body'])} words; at most {LETTER_WORDS}")
+    if words(answer["subject"]) > SUBJECT_WORDS:
+        problems.append(f"subject is {words(answer['subject'])} words; at most {SUBJECT_WORDS}")
     return problems
 
 
@@ -408,17 +382,15 @@ def main():
                     json.dumps(ans, indent=1), encoding="utf-8")
     conn.close()
 
-    plan = answers.get(("plan", "plan"))
     out = {
         "source": f"snowflake-cortex-{args.model}",
         "prompt_version": PROMPT_VERSION,
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "plan": {"summary": plan["summary"].strip()} if plan else None,
         "letters": {key: {"subject": a["subject"].strip(), "body": a["body"].strip()}
                     for (kind, key), a in sorted(answers.items()) if kind == "letter"},
     }
     OUT.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"{'plan summary, ' if plan else 'no plan summary, '}{len(out['letters'])} letters -> {OUT}")
+    print(f"{len(out['letters'])} letters -> {OUT}")
 
 
 if __name__ == "__main__":

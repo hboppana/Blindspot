@@ -5,6 +5,7 @@ import { CarProfile } from "@phosphor-icons/react/ssr";
 import "./globals.css";
 import { NavLinks } from "@/components/NavLinks";
 import { RevealOnce } from "@/components/RevealOnce";
+import { AskStreetSmart } from "@/components/AskStreetSmart";
 
 // Overpass descends from Highway Gothic, the lettering on US road signs.
 const overpass = Overpass({
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <CarProfile weight="fill" className="lane-car" />
         </div>
         <main className="flex-1">{children}</main>
+        <AskStreetSmart />
       </body>
     </html>
   );

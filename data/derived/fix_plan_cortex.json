@@ -1,10 +1,7 @@
 {
  "source": "snowflake-cortex-claude-sonnet-4-5",
  "prompt_version": 1,
- "generated_at": "2026-09-27T12:02:15Z",
- "plan": {
-  "summary": "Start with appropriate yellow change intervals at 6 intersections, a low-cost fix that could avoid 16 to 28 crashes a year. Across all proven fixes, Gainesville could avoid 24 to 43 crashes a year at its most dangerous intersections."
- },
+ "generated_at": "2026-09-27T12:17:37Z",
  "letters": {
   "Appropriate yellow change intervals": {
    "subject": "Request to evaluate appropriate yellow change intervals at 6 intersections",

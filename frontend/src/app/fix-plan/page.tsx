@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MapTrifold, Path, SealCheck, Snowflake } from "@phosphor-icons/react/ssr";
+import { ArrowRight, MapTrifold, Path, SealCheck } from "@phosphor-icons/react/ssr";
 import { getFixList, getFixPlanNotes, getIntersection } from "@/lib/api";
 import { capitalize, displayName, totalCrashEffect } from "@/lib/format";
 import { fixStory, shortFixName } from "@/lib/plain";
@@ -14,9 +14,9 @@ import { TrafficLight } from "@/components/viz/TrafficLight";
 // broken, the Watch List what's getting worse; this says what building the
 // fixes would do and how to move them forward. Every estimate uses only a
 // fix's FHWA effect on total crashes, applied to that intersection's crashes.
-// Snowflake Cortex adds the words, never the numbers: a short "where to start"
-// and a draft request letter per fix, generated offline from these same
-// figures (scripts/cortex_fix_plan.py). Without them the page is unchanged.
+// Snowflake Cortex adds the words, never the numbers: a draft request letter
+// per fix, generated offline from these same figures
+// (scripts/cortex_fix_plan.py). Without them the page is unchanged.
 
 const COST_STEPS = ["low", "medium", "high"] as const;
 const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
@@ -94,17 +94,6 @@ export default async function FixPlanPage() {
         <p className="mt-1 text-muted">
           Estimates apply each fix&apos;s federal result on total crashes to the crashes these intersections have now.
         </p>
-
-        {notes?.plan && (
-          <div className="reveal mt-5 flex gap-4 rounded-2xl border border-line bg-surface p-5">
-            <Snowflake weight="bold" className="mt-0.5 size-6 shrink-0 text-[#29b5e8]" aria-hidden />
-            <div>
-              <p className="text-sm font-bold text-muted">Where to start</p>
-              <p className="mt-1 text-lg leading-snug font-semibold">{notes.plan.summary}</p>
-              <p className="mt-2 text-xs text-muted">Written by Snowflake Cortex from the figures on this page.</p>
-            </div>
-          </div>
-        )}
 
         <ol className="mt-5 space-y-4">
           {groups.map((g, i) => (
