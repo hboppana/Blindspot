@@ -7,8 +7,10 @@ Interactive docs at http://localhost:8000/docs.
 ALLOWED_ORIGINS (comma-separated) adds CORS origins beyond http://localhost:3000.
 """
 
+import math
 import os
 from contextlib import asynccontextmanager
+from datetime import date
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query, Response
@@ -26,11 +28,23 @@ ORIGINS = ["http://localhost:3000"] + [
 LIST_COLUMNS = """id, name, lat, lon, crashes_since_2022, excess_per_year, screening_rank,
     main_factor, confidence, has_gemini_description, recommended_fix_name,
     pedestrian_crashes, bicycle_crashes, in_fix_list"""
+# Each ends on hotspot_rank, id so ties don't come back in whatever order the rows are stored.
 SORTS = {
-    "rank": "screening_rank NULLS LAST, crashes_since_2022 DESC",
-    "crashes": "crashes_since_2022 DESC",
-    "excess": "excess_per_year DESC NULLS LAST",
+    "rank": "screening_rank NULLS LAST, crashes_since_2022 DESC, hotspot_rank NULLS LAST, id",
+    "crashes": "crashes_since_2022 DESC, hotspot_rank NULLS LAST, id",
+    "excess": "excess_per_year DESC NULLS LAST, hotspot_rank NULLS LAST, id",
 }
+
+# scripts/backtest.py and build_hotspots.py (which needs numpy, so the constants are copied)
+BACKTEST_TOP = 20
+BACKTEST_MATCH_M = 40
+M_PER_DEG_LAT = 110_860
+M_PER_DEG_LON = 111_320 * math.cos(math.radians(29.65))
+
+
+def js_round(x):
+    """Math.round, so numbers match the frontend's mocks (Python's round() goes to even on .5)."""
+    return math.floor(x + 0.5)
 
 
 @asynccontextmanager
@@ -83,6 +97,66 @@ def fix_list():
         [[f["id"] for f in fixes]],
     )}
     return [{**f, **{k: v for k, v in places.get(f["id"], {}).items() if k != "id"}} for f in fixes]
+
+
+@app.get("/watch-list")
+def watch_list():
+    """Intersections whose crashes are climbing, worst climb first; the top 10 on the fix list are left out.
+
+    The latest year is partial, so it is put on a full-year pace. "Rising" means the recent rate
+    (last full year and this year's pace) is above the rate of the first two years, both middle
+    years are at least the year two before them, and there are 8+ crashes a year recently.
+    """
+    period_end = fetch_one("SELECT summary->>'period' AS period FROM city_summary WHERE id = 1")["period"].split(" to ")[1]
+    end = date.fromisoformat(period_end)
+    year_fraction = (end - date(end.year, 1, 1)).days / 365
+    years = [2022, 2023, 2024, 2025, end.year]
+    rows = []
+    for r in fetch_all(
+        """SELECT i.id, i.name, c.crash_profile->'by_year' AS by_year
+           FROM intersections i JOIN case_files c ON c.intersection_id = i.id
+           WHERE c.crash_profile IS NOT NULL AND NOT i.in_fix_list
+           ORDER BY i.hotspot_rank"""
+    ):
+        counts = [(r["by_year"] or {}).get(str(y), 0) for y in years]
+        pace = counts[4] / year_fraction
+        early = (counts[0] + counts[1]) / 2
+        late = (counts[3] + pace) / 2
+        if late >= 8 and late > early and counts[2] >= counts[0] and counts[3] >= counts[1]:
+            rows.append((r, counts, pace, early, late))
+    rows.sort(key=lambda x: x[4] - x[3], reverse=True)
+    return {"through": period_end, "rows": [{
+        "id": r["id"],
+        "name": r["name"],
+        "rank": i + 1,
+        "by_year": [{"year": y, "crashes": counts[k], "partial": y == end.year,
+                     "pace": js_round(pace) if y == end.year else counts[k]} for k, y in enumerate(years)],
+        "per_year_before": js_round(early * 10) / 10,
+        "per_year_now": js_round(late * 10) / 10,
+    } for i, (r, counts, pace, early, late) in enumerate(rows[:10])]}
+
+
+@app.get("/backtest")
+def backtest():
+    """Today's top 20 (by crashes since 2022) looked up in the ranking built from 2015 to 2021 only, by location."""
+    past = fetch_all("SELECT rank, lat, lon FROM backtest_hotspots")
+    now = fetch_all(
+        """SELECT id, name, lat, lon, hotspot_rank, crashes_since_2022 FROM intersections
+           WHERE hotspot_rank IS NOT NULL ORDER BY hotspot_rank LIMIT %s""",
+        [BACKTEST_TOP],
+    )
+    rows = []
+    for h in now:
+        best = min(past, key=lambda p: math.hypot((p["lon"] - h["lon"]) * M_PER_DEG_LON, (p["lat"] - h["lat"]) * M_PER_DEG_LAT))
+        d = math.hypot((best["lon"] - h["lon"]) * M_PER_DEG_LON, (best["lat"] - h["lat"]) * M_PER_DEG_LAT)
+        rows.append({"id": h["id"], "name": h["name"], "rank_now": h["hotspot_rank"], "crashes_now": h["crashes_since_2022"],
+                     "rank_before_2022": best["rank"] if d <= BACKTEST_MATCH_M else None})
+
+    def flagged(k):
+        return sum(1 for r in rows if r["rank_before_2022"] and r["rank_before_2022"] <= k)
+
+    return {"top": BACKTEST_TOP, "flagged_in_top_10": flagged(10), "flagged_in_top_20": flagged(20),
+            "flagged_in_top_50": flagged(50), "rows": rows}
 
 
 @app.get("/intersections")

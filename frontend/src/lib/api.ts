@@ -52,16 +52,6 @@ export const getIntersection = (id: string) =>
 
 export const getFixList = () => getOrThrow<FixListItem[]>("/fix-list");
 
-// Not an API endpoint: always the file built by scripts/make-mocks.mjs.
-export const getBacktest = async () => {
-  const data = await readMock<Backtest>("/backtest");
-  if (!data) throw new Error("mock/backtest.json missing: run npm run mocks");
-  return data;
-};
+export const getBacktest = () => getOrThrow<Backtest>("/backtest");
 
-// Not an API endpoint either: the rising-crash list, built with the mocks.
-export const getWatchList = async () => {
-  const data = await readMock<WatchList>("/watch-list");
-  if (!data) throw new Error("mock/watch-list.json missing: run npm run mocks");
-  return data;
-};
+export const getWatchList = () => getOrThrow<WatchList>("/watch-list");

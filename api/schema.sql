@@ -4,7 +4,7 @@
 -- then reloads everything from data/derived/ and data/reference/.
 
 DROP MATERIALIZED VIEW IF EXISTS crashes_monthly CASCADE;
-DROP TABLE IF EXISTS crashes, countermeasures, city_summary, case_files, intersections CASCADE;
+DROP TABLE IF EXISTS crashes, countermeasures, city_summary, case_files, intersections, backtest_hotspots CASCADE;
 
 -- One row per intersection: what the map, ranked list and filters need.
 CREATE TABLE intersections (
@@ -15,6 +15,7 @@ CREATE TABLE intersections (
     lon                     double precision NOT NULL,
 
     crashes_since_2022      integer NOT NULL,
+    hotspot_rank            integer,            -- hotspots.json rank (crashes since 2022, ties as the pipeline broke them); null if not a hotspot
     crashes_all_years       integer NOT NULL,
     fdot_crashes            integer NOT NULL,   -- FDOT 2015 to 2019
     pedestrian_crashes      integer,            -- since 2022; null without a crash profile
@@ -87,6 +88,16 @@ CREATE TABLE countermeasures (
     addresses     text[] NOT NULL,
     applies_when  jsonb,
     note          text
+);
+
+-- The hotspot ranking built from 2015 to 2021 crashes only (backtest_2015_2021.json),
+-- for GET /backtest. Matched to today's intersections by location, not id.
+CREATE TABLE backtest_hotspots (
+    rank  integer PRIMARY KEY,
+    id    text NOT NULL,
+    name  text NOT NULL,
+    lat   double precision NOT NULL,
+    lon   double precision NOT NULL
 );
 
 -- Every dataGNV crash since 2015, not linked to intersections: citywide trends only.

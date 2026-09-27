@@ -7,7 +7,8 @@
 //   mock/fix-list.json              GET /fix-list
 //   mock/intersections.json         GET /intersections
 //   mock/intersections/{id}.json    GET /intersections/{id}
-//   mock/backtest.json              frontend-only (not in the API)
+//   mock/backtest.json              GET /backtest
+//   mock/watch-list.json            GET /watch-list
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -270,13 +271,14 @@ write("backtest.json", {
   rows: backRows,
 });
 
-// Watch List (frontend-only): intersections whose crashes are climbing. The
-// latest year is partial, so it is put on a full-year pace. "Rising" means
-// the recent rate (last full year and this year's pace) is above the rate of
-// the first two years, both middle years are at least the year two before
-// them, and there are enough crashes (8+ a year recently) for it to mean
-// something. Ranked by crashes a year added. The top 10 already on the fix
-// list are left out: this list is for the ones heading there.
+// Watch List (GET /watch-list; api/main.py has the same rules): intersections
+// whose crashes are climbing. The latest year is partial, so it is put on a
+// full-year pace. "Rising" means the recent rate (last full year and this
+// year's pace) is above the rate of the first two years, both middle years are
+// at least the year two before them, and there are enough crashes (8+ a year
+// recently) for it to mean something. Ranked by crashes a year added. The top
+// 10 already on the fix list are left out: this list is for the ones heading
+// there.
 const [, periodEnd] = city.summary.period.split(" to ");
 const endYear = Number(periodEnd.slice(0, 4));
 const startOfYear = new Date(`${endYear}-01-01T00:00:00Z`);

@@ -15,6 +15,8 @@ Read-only JSON API over the Tiger Data database. Examples below are real respons
 | [`GET /fix-list`](#get-fix-list) | "Fix these 10 intersections" |
 | [`GET /city/summary`](#get-citysummary) | Header numbers and the audit report |
 | [`GET /city/trend`](#get-citytrend) | Citywide crashes by month chart |
+| [`GET /watch-list`](#get-watch-list) | Intersections whose crashes are climbing |
+| [`GET /backtest`](#get-backtest) | Were today's worst corners visible before 2022? |
 | `GET /health` | `{"ok": true}` when the database answers |
 
 ## Things to know
@@ -195,6 +197,46 @@ The city summary's fix list, each with location and main factor.
     "has_gemini_description": true
   }
 ]
+```
+
+## GET /watch-list
+
+Up to 10 intersections whose crashes are climbing, worst climb first, leaving out the fix list. The latest year is partial (`through`), so `pace` puts it on a full-year rate. A corner makes the list when its recent rate (last full year and this year's pace) is above its 2022-23 average, both middle years are at least the year two before them, and it has 8+ crashes a year recently.
+
+```json
+{
+  "through": "2026-07-23",
+  "rows": [
+    {
+      "id": "clark-butler-blvd-windmeadows-blvd",
+      "name": "Clark Butler Blvd & Windmeadows Blvd",
+      "rank": 1,
+      "by_year": [
+        {"year": 2022, "crashes": 12, "partial": false, "pace": 12},
+        ...
+        {"year": 2026, "crashes": 12, "partial": true, "pace": 22}
+      ],
+      "per_year_before": 11.5,
+      "per_year_now": 23.8
+    }
+  ]
+}
+```
+
+## GET /backtest
+
+Today's top 20 (by crashes since 2022), each looked up by location (within 40 m) in the ranking built from 2015 to 2021 crashes only. `rank_before_2022` is null when the corner wasn't in that ranking. `flagged_in_top_k` counts how many were already in its top k.
+
+```json
+{
+  "top": 20,
+  "flagged_in_top_10": 8,
+  "flagged_in_top_20": 16,
+  "flagged_in_top_50": 20,
+  "rows": [
+    {"id": "sw-34th-st-sw-archer-rd", "name": "SW 34th St & SW Archer Rd", "rank_now": 1, "crashes_now": 275, "rank_before_2022": 1}
+  ]
+}
 ```
 
 ## GET /city/summary

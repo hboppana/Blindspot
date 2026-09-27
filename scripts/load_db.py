@@ -7,6 +7,7 @@ Drops and recreates every table from api/schema.sql, then loads:
                    recommendations and crash profile
   city_summary     city_summary.json
   countermeasures  data/reference/countermeasures.json
+  backtest_hotspots  backtest_2015_2021.json: the ranking from 2015 to 2021 only
   crashes          every dataGNV crash (hypertable), for citywide trends,
                    and refreshes the crashes_monthly continuous aggregate
 
@@ -98,6 +99,7 @@ def intersection_rows(features, hotspots, causes, recs, cases, fix_list):
             "raw_name": f["intersection_id"],
             "lat": lat, "lon": lon,
             "crashes_since_2022": int(f["crashes_window"]),
+            "hotspot_rank": h["rank"] if h else None,
             "crashes_all_years": int(f["crashes_all_years"]),
             "fdot_crashes": int(f["fdot_crashes"]),
             "pedestrian_crashes": round(crash["pedestrian_share"] * crash["crashes"]) if crash else None,
@@ -127,6 +129,11 @@ def intersection_rows(features, hotspots, causes, recs, cases, fix_list):
             "in_fix_list": cid in fix_rank,
             "fix_list_rank": fix_rank.get(cid),
         }
+
+
+def backtest_rows():
+    for h in read_json(DERIVED / "backtest_2015_2021.json")["hotspots"]:
+        yield {"rank": h["rank"], "id": h["id"], "name": h["name"], "lat": h["lat"], "lon": h["lon"]}
 
 
 def jsonb(v):
@@ -205,6 +212,8 @@ def main():
                 "note": m.get("note"),
             } for mid, m in measures.items()))
             print(f"countermeasures: {n}")
+            n = insert(cur, "backtest_hotspots", backtest_rows())
+            print(f"backtest_hotspots: {n}")
             n, skipped = copy_crashes(cur)
             print(f"crashes: {n}" + (f" ({skipped} without a time skipped)" if skipped else ""))
 

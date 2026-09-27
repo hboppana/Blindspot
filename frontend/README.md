@@ -27,7 +27,8 @@ All data goes through `src/lib/api.ts` (server-side only, so there's no CORS and
 | `GET /intersections/{id}` | `mock/intersections/{id}.json` | `/intersections/[id]` |
 | `GET /intersections/{id}/report.pdf` | none (print fallback) | `/intersections/[id]/report` (proxy) |
 | `GET /fix-list` | `mock/fix-list.json` | `/fix-list` |
-| none (frontend-only) | `mock/backtest.json` | `/backtest` |
+| `GET /backtest` | `mock/backtest.json` | `/backtest` |
+| `GET /watch-list` | `mock/watch-list.json` | `/watch-list` |
 
 ## Google Maps
 

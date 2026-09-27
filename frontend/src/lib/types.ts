@@ -185,7 +185,7 @@ export interface CaseFacts {
   imagery_dates: string | null;
 }
 
-// Not in the API yet: frontend-only, built by scripts/make-mocks.mjs.
+// GET /backtest
 export interface Backtest {
   top: number;
   flagged_in_top_10: number;
@@ -200,7 +200,7 @@ export interface Backtest {
   }[];
 }
 
-// Not in the API yet: frontend-only, built by scripts/make-mocks.mjs.
+// GET /watch-list
 // Intersections whose crashes are climbing, worst climb first.
 export interface WatchList {
   through: string; // "2026-07-23": the last year is partial
