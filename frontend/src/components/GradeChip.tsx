@@ -56,7 +56,7 @@ export function GradeLegend({ className = "" }: { className?: string }) {
       </ul>
       <p className="mt-2 flex items-center gap-2 text-muted">
         <span className="inline-block size-3 rounded-full border-2 border-foreground" />
-        Ringed: on the Wreck List
+        Ringed: on the Red List
       </p>
     </div>
   );

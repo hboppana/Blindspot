@@ -175,7 +175,7 @@ function SelectedPopup({
               .join(", ")}
           </p>
         )}
-        {i.in_fix_list && <p className="mt-1 font-semibold text-[#6b5200]">On the Wreck List</p>}
+        {i.in_fix_list && <p className="mt-1 font-semibold text-[#6b5200]">On the Red List</p>}
         <Link
           href={`/intersections/${i.id}`}
           className="mt-3 inline-flex h-8 items-center rounded-full bg-[#1f2226] px-3.5 text-sm font-bold text-white transition-colors hover:bg-[#353a40]"

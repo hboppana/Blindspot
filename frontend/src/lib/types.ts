@@ -199,3 +199,17 @@ export interface Backtest {
     rank_before_2022: number | null;
   }[];
 }
+
+// Not in the API yet: frontend-only, built by scripts/make-mocks.mjs.
+// Intersections whose crashes are climbing, worst climb first.
+export interface WatchList {
+  through: string; // "2026-07-23": the last year is partial
+  rows: {
+    id: string;
+    name: string;
+    rank: number;
+    by_year: { year: number; crashes: number; partial: boolean; pace: number }[];
+    per_year_before: number; // 2022-23 average
+    per_year_now: number; // last full year and this year's pace, averaged
+  }[];
+}

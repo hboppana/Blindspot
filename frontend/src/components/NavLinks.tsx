@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { ListNumbers, MapTrifold } from "@phosphor-icons/react";
+import { ListNumbers, MapTrifold, TrendUp } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 
 const LINKS = [
@@ -14,10 +14,16 @@ const LINKS = [
     match: (p: string) => p.startsWith("/map") || p.startsWith("/intersections"),
   },
   {
-    href: "/fix-list",
-    label: "Wreck List",
+    href: "/red-list",
+    label: "Red List",
     Icon: ListNumbers,
-    match: (p: string) => p.startsWith("/fix-list") || p.startsWith("/backtest"),
+    match: (p: string) => p.startsWith("/red-list") || p.startsWith("/backtest"),
+  },
+  {
+    href: "/watch-list",
+    label: "Watch List",
+    Icon: TrendUp,
+    match: (p: string) => p.startsWith("/watch-list"),
   },
 ];
 

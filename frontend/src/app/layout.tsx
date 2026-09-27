@@ -4,6 +4,7 @@ import { Geist_Mono, Overpass } from "next/font/google";
 import { CarProfile } from "@phosphor-icons/react/ssr";
 import "./globals.css";
 import { NavLinks } from "@/components/NavLinks";
+import { RevealOnce } from "@/components/RevealOnce";
 
 // Overpass descends from Highway Gothic, the lettering on US road signs.
 const overpass = Overpass({
@@ -27,8 +28,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${overpass.variable} ${geistMono.variable} h-full antialiased`}
+      // The script below adds a class before React loads.
+      suppressHydrationWarning
     >
+      <head>
+        {/* Before first paint: hold scroll-in elements back so RevealOnce can play
+            them once, without a flash. Skipped for reduced motion, and without
+            JavaScript it never runs, so everything shows. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'if(!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("reveal-ready")',
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
+        <RevealOnce />
         <header className="print:hidden">
           <div className="flex h-[76px] items-center gap-3 bg-brand px-4 text-white sm:h-[98px] sm:gap-8 sm:px-8">
             <Link href="/" className="flex shrink-0 items-center gap-2.5 text-xl font-extrabold tracking-tight sm:gap-3.5 sm:text-3xl">
@@ -39,7 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </svg>
               {/* Trimmed to the capital letters, so centring lines the letters
                   (not Overpass's roomy line box) up with the sign. */}
-              <span className="block leading-none [text-box:trim-both_cap_alphabetic]">
+              <span className="block leading-none [text-box:trim-both_cap_alphabetic] max-[430px]:sr-only">
                 StreetSmart
                 <span className="ml-3 hidden font-normal text-white/55 sm:inline">Gainesville</span>
               </span>

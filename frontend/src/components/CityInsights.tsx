@@ -139,8 +139,8 @@ export function CityInsights({
               detail: `${g.count} ${g.count === 1 ? "intersection" : "intersections"}`,
             }))}
           />
-          <Link href="/fix-list" className="road-link mt-5 inline-block text-sm font-semibold">
-            See the fix list
+          <Link href="/red-list" className="road-link mt-5 inline-block text-sm font-semibold">
+            See the Red List
           </Link>
         </Block>
       </div>

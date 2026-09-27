@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, MagnifyingGlass, Scales, Wrench } from "@phosphor-icons/react/ssr";
-import { getCitySummary, getFixList } from "@/lib/api";
-import { displayName, monthYear, num } from "@/lib/format";
+import { ArrowRight, MagnifyingGlass, Scales, SealCheck, Wrench } from "@phosphor-icons/react/ssr";
+import { getCitySummary, getFixList, getIntersection } from "@/lib/api";
+import { displayName, monthYear, num, titleCase } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 
-// The front door. Three beats, one idea each: where crashes happen (problem),
-// how StreetSmart reads them (solution), what fixing the worst corners is worth
-// (impact). Detail lives on the map and the wreck list, one click away.
+// The front door. Four beats, one idea each: where crashes happen (problem),
+// why that is the road's doing and not only the drivers' (the reviewer's first
+// question), how StreetSmart reads the road (solution), and what fixing the
+// worst corners is worth (impact). Detail lives on the map and the lists.
 
 const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
@@ -32,6 +33,16 @@ export default async function Home() {
   const [{ summary: s }, fixes] = await Promise.all([getCitySummary(), getFixList()]);
   const through = monthYear(s.period.split(" to ")[1]);
 
+  // The evidence that it's the road: the worst corner against intersections
+  // with the same traffic, and a Gainesville corner where changing the road
+  // cut crashes (from the worst corner's case file).
+  const worst = fixes[0];
+  const worstSimilar = worst ? Math.max(worst.crashes_per_year - worst.excess_crashes_per_year, 0) : 0;
+  const precedent = worst ? (await getIntersection(worst.id))?.case_file?.facts?.gainesville_precedent : null;
+  const precedentDrop = Number(precedent?.effect.match(/(\d+)%\s+fewer/)?.[1] ?? NaN);
+  // Its first sentence says what was built, minus the bracketed road numbers.
+  const precedentChange = precedent?.change.split(". ")[0].replace(/\s*\([^)]*\)/g, "");
+
   return (
     <>
       {/* Hero */}
@@ -44,8 +55,8 @@ export default async function Home() {
             Safer streets start at the corner.
           </h1>
           <p className="rise mt-6 max-w-[34ch] text-lg leading-relaxed text-muted sm:text-xl" style={stagger(1)}>
-            StreetSmart finds Gainesville&apos;s most dangerous intersections, shows why they keep
-            crashing, and names the fix.
+            StreetSmart is ground intelligence: it reads Gainesville&apos;s roads to find the intersections
+            that keep crashing, why, and the fix.
           </p>
           <div className="rise mt-9 flex flex-wrap gap-3" style={stagger(2)}>
             <Button asChild size="lg">
@@ -55,7 +66,7 @@ export default async function Home() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/fix-list">See the Wreck List</Link>
+              <Link href="/red-list">See the Red List</Link>
             </Button>
           </div>
         </div>
@@ -77,7 +88,7 @@ export default async function Home() {
           <h2 className="mt-3 max-w-[18ch] text-4xl leading-tight font-extrabold tracking-tight md:text-5xl">
             Most crashes happen where roads meet.
           </h2>
-          <div className="mt-10 grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:gap-16">
+          <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-16">
             <div>
               <p className="text-7xl leading-none font-extrabold tracking-tighter tabular-nums md:text-8xl">
                 {s.share_of_crashes_at_intersections_pct}%
@@ -90,17 +101,108 @@ export default async function Home() {
                 .
               </p>
             </div>
-            <div className="md:self-end">
-              <p className="text-5xl leading-none font-extrabold tracking-tight tabular-nums">
+            <div>
+              <p className="text-7xl leading-none font-extrabold tracking-tighter tabular-nums md:text-8xl">
                 {num(s.with_repeat_crashes)}
               </p>
-              <p className="mt-3 max-w-[30ch] text-muted">
-                intersections have had five or more. The same corners, again and again.
+              <p className="mt-4 max-w-[36ch] text-lg text-muted">
+                intersections have had five or more crashes since 2022. The same corners, again and again.
               </p>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Why the road */}
+      {worst && (
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+          <h2 className="reveal max-w-[22ch] text-4xl leading-tight font-extrabold tracking-tight text-balance md:text-5xl">
+            It isn&apos;t just the drivers.
+          </h2>
+          <p className="reveal mt-4 max-w-[60ch] text-lg text-muted">
+            Every crash involves a mistake. But the same Gainesville drivers use every intersection in town, and a few
+            crash far more than others carrying the same traffic. When one corner keeps producing the same crash, the
+            corner is the cause.
+          </p>
+
+          <div className="mt-10 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+            {/* Same traffic, different road */}
+            <div className="reveal flex flex-col rounded-2xl border border-line bg-surface p-6 sm:p-8">
+              <h3 className="text-sm font-bold text-muted">Same traffic, different road</h3>
+              <p className="mt-2 text-2xl leading-snug font-extrabold tracking-tight">
+                {displayName(worst.name)} has {worst.crashes_per_year} crashes a year. Intersections with the same
+                traffic and layout have {Math.round(worstSimilar)}.
+              </p>
+              <div className="mt-8 space-y-5">
+                {[
+                  { label: "Intersections with the same traffic", value: worstSimilar, color: "var(--baseline)" },
+                  { label: displayName(worst.name), value: worst.crashes_per_year, color: "#c8102e" },
+                ].map((b) => (
+                  <div key={b.label}>
+                    <div className="flex items-baseline justify-between gap-4 text-sm">
+                      <span className="font-semibold">{b.label}</span>
+                      <span className="text-lg font-extrabold tabular-nums">{Math.round(b.value)} a year</span>
+                    </div>
+                    <div
+                      className="reveal-grow mt-2 h-4 rounded-full"
+                      style={{ width: `${(b.value / worst.crashes_per_year) * 100}%`, background: b.color }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-auto pt-8 text-muted">
+                Same drivers, same number of cars. The{" "}
+                <span className="font-bold text-danger-ink">
+                  {Math.round(worst.excess_crashes_per_year)} extra crashes
+                </span>{" "}
+                a year come from the intersection itself.
+              </p>
+            </div>
+
+            <div className="grid gap-4">
+              {/* Change the road, crashes drop */}
+              {precedent && Number.isFinite(precedentDrop) && (
+                <div className="reveal rounded-2xl bg-brand p-6 text-white ring-1 ring-line sm:p-8">
+                  <h3 className="text-sm font-bold text-accent">Change the road, crashes drop</h3>
+                  <p className="mt-2 text-xl leading-snug font-extrabold">
+                    {titleCase(precedent.intersection)}: about {precedentDrop}% fewer crashes after the road was rebuilt.
+                  </p>
+                  <div className="mt-5 space-y-2 text-sm">
+                    {[
+                      { label: "Before", value: 100, color: "#5f666d" },
+                      { label: "After", value: 100 - precedentDrop, color: "#2fd08f" },
+                    ].map((b) => (
+                      <div key={b.label} className="flex items-center gap-3">
+                        <span className="w-12 text-white/60">{b.label}</span>
+                        <span
+                          className="reveal-grow h-3 rounded-full"
+                          style={{ width: `${b.value * 0.8}%`, background: b.color }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-sm text-white/65">
+                    Same drivers. {precedentChange}. Measured against the change across the whole city.
+                  </p>
+                </div>
+              )}
+
+              {/* The federal standard */}
+              <div className="reveal rounded-2xl border border-line bg-surface p-6 sm:p-8">
+                <h3 className="text-sm font-bold text-muted">The federal standard</h3>
+                <p className="mt-2 text-lg leading-snug font-bold">
+                  The FHWA&apos;s Safe System Approach starts from a plain fact: people make mistakes, so roads should be
+                  built so a mistake doesn&apos;t cost a life.
+                </p>
+                <p className="mt-3 flex items-start gap-2 text-sm text-muted">
+                  <SealCheck weight="fill" className="mt-0.5 size-4 shrink-0 text-good-ink" aria-hidden />
+                  Every fix StreetSmart suggests is on the FHWA&apos;s list of proven safety countermeasures.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Solution */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
@@ -137,8 +239,8 @@ export default async function Home() {
                 see. That excess is what each fix is designed to remove.
               </p>
               <Button asChild size="lg" className="mt-9">
-                <Link href="/fix-list">
-                  See the Wreck List
+                <Link href="/red-list">
+                  See the Red List
                   <ArrowRight weight="bold" aria-hidden />
                 </Link>
               </Button>

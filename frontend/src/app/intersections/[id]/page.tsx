@@ -140,10 +140,10 @@ export default async function ReportPage(props: PageProps<"/intersections/[id]">
             <h1 className="text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl">{name}</h1>
             {x.fix_list_rank && (
               <Link
-                href="/fix-list"
+                href="/red-list"
                 className="rounded-full bg-accent-soft px-3 py-1 text-sm font-bold text-accent-ink"
               >
-                #{x.fix_list_rank} on the Wreck List
+                #{x.fix_list_rank} on the Red List
               </Link>
             )}
           </div>

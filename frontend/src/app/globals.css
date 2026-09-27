@@ -183,6 +183,11 @@ body {
     transform: scaleX(0);
   }
 }
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .rise {
@@ -199,19 +204,37 @@ body {
     animation-delay: calc(var(--i, 0) * 70ms + 200ms);
   }
 
-  /* Below the fold: tie the reveal to the element scrolling into view.
-     Browsers without scroll-driven animations just show it, unanimated. */
-  @supports (animation-timeline: view()) {
-    .reveal {
-      animation: rise linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 60%;
-    }
-    .reveal-grow {
-      transform-origin: left center;
-      animation: grow-x linear both;
-      animation-timeline: view();
-      animation-range: entry 20% cover 35%;
-    }
+  /* Below the fold: each element plays once, the first time it scrolls into
+     view, then stays put (scrolling back up never rewinds it). RevealOnce
+     marks elements `.is-in`; `reveal-ready` goes on <html> before first
+     paint, so without JavaScript everything simply shows. */
+  .reveal-ready .reveal:not(.is-in) {
+    opacity: 0;
+  }
+  .reveal-ready .reveal.is-in {
+    animation: rise 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(min(var(--i, 0), 6) * 60ms);
+  }
+  .reveal-grow,
+  .reveal-grow-y {
+    transform-origin: left center;
+  }
+  .reveal-grow-y {
+    transform-origin: center bottom;
+  }
+  .reveal-ready .reveal-grow:not(.is-in) {
+    transform: scaleX(0);
+  }
+  .reveal-ready .reveal-grow-y:not(.is-in) {
+    transform: scaleY(0);
+  }
+  .reveal-ready .reveal-grow.is-in {
+    animation: grow-x 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 120ms;
+  }
+  /* Columns rise from their base. */
+  .reveal-ready .reveal-grow-y.is-in {
+    animation: grow-y 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 100ms;
   }
 }

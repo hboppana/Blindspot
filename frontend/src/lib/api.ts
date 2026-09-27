@@ -8,6 +8,7 @@ import type {
   IntersectionDetail,
   IntersectionListItem,
   TrendMonth,
+  WatchList,
 } from "./types";
 
 // Set API_BASE_URL (e.g. http://localhost:8000) to use the real backend.
@@ -55,5 +56,12 @@ export const getFixList = () => getOrThrow<FixListItem[]>("/fix-list");
 export const getBacktest = async () => {
   const data = await readMock<Backtest>("/backtest");
   if (!data) throw new Error("mock/backtest.json missing: run npm run mocks");
+  return data;
+};
+
+// Not an API endpoint either: the rising-crash list, built with the mocks.
+export const getWatchList = async () => {
+  const data = await readMock<WatchList>("/watch-list");
+  if (!data) throw new Error("mock/watch-list.json missing: run npm run mocks");
   return data;
 };

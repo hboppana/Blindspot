@@ -270,6 +270,52 @@ write("backtest.json", {
   rows: backRows,
 });
 
+// Watch List (frontend-only): intersections whose crashes are climbing. The
+// latest year is partial, so it is put on a full-year pace. "Rising" means
+// the recent rate (last full year and this year's pace) is above the rate of
+// the first two years, both middle years are at least the year two before
+// them, and there are enough crashes (8+ a year recently) for it to mean
+// something. Ranked by crashes a year added. The top 10 already on the fix
+// list are left out: this list is for the ones heading there.
+const [, periodEnd] = city.summary.period.split(" to ");
+const endYear = Number(periodEnd.slice(0, 4));
+const startOfYear = new Date(`${endYear}-01-01T00:00:00Z`);
+const yearFraction = (new Date(`${periodEnd}T00:00:00Z`) - startOfYear) / 864e5 / 365;
+const WATCH_YEARS = [2022, 2023, 2024, 2025, endYear];
+const watchRows = hotspotList
+  .filter((h) => !fixRank.has(h.id))
+  .map((h) => {
+    const byYear = h.crashes?.by_year ?? {};
+    const counts = WATCH_YEARS.map((y) => byYear[y] ?? 0);
+    const pace = counts[4] / yearFraction;
+    const early = (counts[0] + counts[1]) / 2;
+    const late = (counts[3] + pace) / 2;
+    return { h, counts, pace, early, late };
+  })
+  .filter(
+    (r) =>
+      r.late >= 8 &&
+      r.late > r.early &&
+      r.counts[2] >= r.counts[0] &&
+      r.counts[3] >= r.counts[1],
+  )
+  .sort((a, b) => b.late - b.early - (a.late - a.early))
+  .slice(0, 10)
+  .map((r, i) => ({
+    id: r.h.id,
+    name: r.h.name,
+    rank: i + 1,
+    by_year: WATCH_YEARS.map((year, k) => ({
+      year,
+      crashes: r.counts[k],
+      partial: year === endYear,
+      pace: year === endYear ? Math.round(r.pace) : r.counts[k],
+    })),
+    per_year_before: Math.round(r.early * 10) / 10,
+    per_year_now: Math.round(r.late * 10) / 10,
+  }));
+write("watch-list.json", { through: periodEnd, rows: watchRows });
+
 console.log(
   `mock data: ${rows.length} intersections, ${months.size} months, ` +
     `backtest ${flagged(20)} of ${TOP} -> ${out}`,
