@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { capitalize } from "@/lib/format";
+import { capitalize, hour12 } from "@/lib/format";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 
 // Charts draw in once on load (the data arriving); off for reduced motion.
@@ -93,7 +93,7 @@ export function CrashesByYear({
 }
 
 export function CrashesByHour({ byHour }: { byHour: number[] }) {
-  const data = byHour.map((crashes, h) => ({ hour: `${h}:00`, crashes }));
+  const data = byHour.map((crashes, h) => ({ hour: hour12(h), crashes }));
   return (
     <figure>
       <ColumnChart data={data} xKey="hour" label="Crashes" interval={2} />

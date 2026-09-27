@@ -50,6 +50,8 @@ export function factorGroup(
   }
 }
 
+export const GAINESVILLE = { lat: 29.6516, lng: -82.3248 };
+
 export const num = (n: number) => n.toLocaleString("en-US");
 
 // Some source names are malformed (e.g. "-a & SW 36th Ter").
@@ -86,3 +88,6 @@ export function groupByFix(fixes: { recommended_fix: string; crashes_per_year: n
     .map(([fix, g]) => ({ fix, ...g }))
     .sort((a, b) => b.perYear - a.perYear);
 }
+
+/** Hour of day 0-23 -> "12 AM", "1 AM", ... "12 PM", ... "11 PM" */
+export const hour12 = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;

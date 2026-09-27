@@ -39,3 +39,12 @@ Set `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY` in `frontend/.env.local`. Use a separa
 - `/intersections/[id]`: case file. Verdict, the four numbers, satellite and Street View, road-design checklist, crashes by year and hour, crash types compared with similar corners, recommended fix (FHWA), local proof, audit text, PDF report.
 - `/fix-list`: top 10.
 - `/backtest`: 16 of today's top 20 flagged using pre-2022 data only.
+
+## Route planner
+
+**Plan a route** (next to **Whole city** on the map) checks a trip from A to B. Google returns up to 3 routes for driving, walking or biking. The app lists the intersections each route passes (within 30 m of the route line) and flags their crash records:
+
+- **High:** on the fix list, or in the worst 50 citywide by crashes above similar corners.
+- **Above average:** more crashes than similar corners, 25+ crashes since 2022, or (walking/biking) any pedestrian or bike crash since 2022.
+
+The logic is in `src/lib/route.ts`. Routing and address search run in the browser, so the browser key also needs **Routes API** and **Places API (New)** enabled in the Cloud project and ticked in the key's API restrictions.
