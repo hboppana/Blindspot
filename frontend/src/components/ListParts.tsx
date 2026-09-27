@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/ssr";
 import { TrafficLight, type Light } from "@/components/viz/TrafficLight";
 
-// Shared by the Red List, the Watch List and the Fix Plan, so the three read as
+// Shared by the Red List, the Watch List and the Road Map, so the three read as
 // one signal: a lit lamp and three figures up top, then the cards.
 
 const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;

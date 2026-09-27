@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- StreetSmart: the cross-road warning sign (MUTCD W2-1), as in the header.
+       The asphalt outline keeps the yellow diamond visible on a light tab. -->
+  <rect x="4.6" y="4.6" width="14.8" height="14.8" rx="2" transform="rotate(45 12 12)" fill="#f6c700" stroke="#1f2226" stroke-width="1.3"/>
+  <path d="M10.9 6.5h2.2v4.4h4.4v2.2h-4.4v4.4h-2.2v-4.4H6.5v-2.2h4.4z" fill="#1f2226"/>
+</svg>

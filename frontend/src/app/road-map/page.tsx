@@ -9,7 +9,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { NumberTicker } from "@/components/viz/NumberTicker";
 import { TrafficLight } from "@/components/viz/TrafficLight";
 
-// The Fix Plan: the green light, last of the three signals. The Red List says what's
+// The Road Map: the green light, last of the three signals. The Red List says what's
 // broken, the Watch List what's getting worse; this says what building the
 // fixes would do and how to move them forward. Every estimate uses only a
 // fix's FHWA effect on total crashes, applied to that intersection's crashes.
@@ -19,7 +19,7 @@ const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
 const plain = (s: string) => capitalize(s.replace(/\s*\([^)]*\)/g, "").trim());
 const range = (lo: number, hi: number) => (Math.round(lo) === Math.round(hi) ? `${Math.round(lo)}` : `${Math.round(lo)} to ${Math.round(hi)}`);
 
-export default async function FixPlanPage() {
+export default async function RoadMapPage() {
   const fixes = await getFixList();
   const details = await Promise.all(fixes.map((f) => getIntersection(f.id)));
 
@@ -64,7 +64,7 @@ export default async function FixPlanPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 pt-10 pb-16 sm:px-6 md:pt-12">
       <ListHero
-        title="The Fix Plan"
+        title="The Road Map"
         lead={`Every fix here is proven and ready to build. This is what building them would do for the Red List, and how to move them forward.`}
         light="green"
         stats={[

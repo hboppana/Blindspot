@@ -31,11 +31,11 @@ const LINKS = [
     match: (p: string) => p.startsWith("/watch-list"),
   },
   {
-    href: "/fix-plan",
-    label: "Fix Plan",
+    href: "/road-map",
+    label: "Road Map",
     short: "Plan",
     lamp: "#2fd08f",
-    match: (p: string) => p.startsWith("/fix-plan"),
+    match: (p: string) => p.startsWith("/road-map"),
   },
 ];
 
