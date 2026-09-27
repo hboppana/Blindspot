@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, MapTrifold, Path, SealCheck } from "@phosphor-icons/react/ssr";
-import { getFixList, getIntersection } from "@/lib/api";
+import { ArrowRight, MapTrifold, Path, SealCheck, Snowflake } from "@phosphor-icons/react/ssr";
+import { getFixList, getFixPlanNotes, getIntersection } from "@/lib/api";
 import { capitalize, displayName, totalCrashEffect } from "@/lib/format";
 import { fixStory, shortFixName } from "@/lib/plain";
 import { Button } from "@/components/ui/button";
 import { ListHero, RankSign } from "@/components/ListParts";
+import { RequestLetter } from "@/components/RequestLetter";
 import { ShareButton } from "@/components/ShareButton";
 import { NumberTicker } from "@/components/viz/NumberTicker";
 import { TrafficLight } from "@/components/viz/TrafficLight";
@@ -13,6 +14,9 @@ import { TrafficLight } from "@/components/viz/TrafficLight";
 // broken, the Watch List what's getting worse; this says what building the
 // fixes would do and how to move them forward. Every estimate uses only a
 // fix's FHWA effect on total crashes, applied to that intersection's crashes.
+// Snowflake Cortex adds the words, never the numbers: a short "where to start"
+// and a draft request letter per fix, generated offline from these same
+// figures (scripts/cortex_fix_plan.py). Without them the page is unchanged.
 
 const COST_STEPS = ["low", "medium", "high"] as const;
 const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
@@ -20,7 +24,7 @@ const plain = (s: string) => capitalize(s.replace(/\s*\([^)]*\)/g, "").trim());
 const range = (lo: number, hi: number) => (Math.round(lo) === Math.round(hi) ? `${Math.round(lo)}` : `${Math.round(lo)} to ${Math.round(hi)}`);
 
 export default async function FixPlanPage() {
-  const fixes = await getFixList();
+  const [fixes, notes] = await Promise.all([getFixList(), getFixPlanNotes()]);
   const details = await Promise.all(fixes.map((f) => getIntersection(f.id)));
 
   // One row per Red List intersection: its fix, the fix's effect, its cost.
@@ -90,6 +94,17 @@ export default async function FixPlanPage() {
         <p className="mt-1 text-muted">
           Estimates apply each fix&apos;s federal result on total crashes to the crashes these intersections have now.
         </p>
+
+        {notes?.plan && (
+          <div className="reveal mt-5 flex gap-4 rounded-2xl border border-line bg-surface p-5">
+            <Snowflake weight="bold" className="mt-0.5 size-6 shrink-0 text-[#29b5e8]" aria-hidden />
+            <div>
+              <p className="text-sm font-bold text-muted">Where to start</p>
+              <p className="mt-1 text-lg leading-snug font-semibold">{notes.plan.summary}</p>
+              <p className="mt-2 text-xs text-muted">Written by Snowflake Cortex from the figures on this page.</p>
+            </div>
+          </div>
+        )}
 
         <ol className="mt-5 space-y-4">
           {groups.map((g, i) => (
@@ -174,28 +189,49 @@ export default async function FixPlanPage() {
                     <strong>{capitalize(g.cost)}</strong>
                   </div>
                 )}
+                {notes?.letters[g.fix] && (
+                  <div className="mt-auto">
+                    <RequestLetter {...notes.letters[g.fix]} about={shortFixName(g.fix)} source={notes.source} />
+                  </div>
+                )}
               </div>
             </li>
           ))}
 
           {reviews.length > 0 && (
-            <li className="reveal rounded-2xl border border-dashed border-line p-5" style={stagger(groups.length)}>
-              <p className="font-bold">
-                {reviews.length === 1 ? "One intersection needs" : `${reviews.length} intersections need`} an
-                engineer&apos;s review first
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                The crashes there are a mix of kinds, so no single standard fix fits:{" "}
-                {reviews.map((r, k) => (
-                  <span key={r.f.id}>
-                    {k > 0 && ", "}
-                    <Link href={`/intersections/${r.f.id}`} className="font-semibold text-foreground hover:underline">
-                      #{r.f.rank} {displayName(r.f.name)}
-                    </Link>
-                  </span>
-                ))}
-                .
-              </p>
+            <li
+              className="reveal flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-line p-5"
+              style={stagger(groups.length)}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-bold">
+                  {reviews.length === 1 ? "One intersection needs" : `${reviews.length} intersections need`} an
+                  engineer&apos;s review first
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  The crashes there are a mix of kinds, so no single standard fix fits:{" "}
+                  {reviews.map((r, k) => (
+                    <span key={r.f.id}>
+                      {k > 0 && ", "}
+                      <Link href={`/intersections/${r.f.id}`} className="font-semibold text-foreground hover:underline">
+                        #{r.f.rank} {displayName(r.f.name)}
+                      </Link>
+                    </span>
+                  ))}
+                  .
+                </p>
+              </div>
+              {reviews.map(
+                (r) =>
+                  notes?.letters[r.f.id] && (
+                    <RequestLetter
+                      key={r.f.id}
+                      {...notes.letters[r.f.id]}
+                      about={`engineering review of ${displayName(r.f.name)}`}
+                      source={notes.source}
+                    />
+                  ),
+              )}
             </li>
           )}
         </ol>

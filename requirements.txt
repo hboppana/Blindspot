@@ -10,3 +10,6 @@ psycopg-pool
 fastapi
 uvicorn[standard]
 fpdf2
+
+# Snowflake Cortex text for the Fix Plan (scripts/cortex_fix_plan.py)
+snowflake-connector-python

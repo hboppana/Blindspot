@@ -4,7 +4,8 @@
 -- then reloads everything from data/derived/ and data/reference/.
 
 DROP MATERIALIZED VIEW IF EXISTS crashes_monthly CASCADE;
-DROP TABLE IF EXISTS crashes, countermeasures, city_summary, case_files, intersections, backtest_hotspots CASCADE;
+DROP TABLE IF EXISTS crashes, countermeasures, city_summary, case_files, intersections, backtest_hotspots,
+    fix_plan_notes CASCADE;
 
 -- One row per intersection: what the map, ranked list and filters need.
 CREATE TABLE intersections (
@@ -98,6 +99,13 @@ CREATE TABLE backtest_hotspots (
     name  text NOT NULL,
     lat   double precision NOT NULL,
     lon   double precision NOT NULL
+);
+
+-- Fix Plan text written by Snowflake Cortex (fix_plan_cortex.json), for GET /fix-plan/notes.
+-- Empty when scripts/cortex_fix_plan.py hasn't been run.
+CREATE TABLE fix_plan_notes (
+    id     integer PRIMARY KEY CHECK (id = 1),
+    notes  jsonb NOT NULL
 );
 
 -- Every dataGNV crash since 2015, not linked to intersections: citywide trends only.

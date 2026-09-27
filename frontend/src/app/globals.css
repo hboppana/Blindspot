@@ -183,6 +183,18 @@ body {
     transform: scaleX(0);
   }
 }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Dialogs keep their centring translate; only scale and fade animate. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
 @keyframes grow-y {
   from {
     transform: scaleY(0);
@@ -236,5 +248,12 @@ body {
   .reveal-ready .reveal-grow-y.is-in {
     animation: grow-y 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: 100ms;
+  }
+}
+
+/* Dialog open/close animations follow the same rule as everything else. */
+@media (prefers-reduced-motion: reduce) {
+  [data-state] {
+    animation: none !important;
   }
 }

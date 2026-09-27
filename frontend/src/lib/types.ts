@@ -213,3 +213,13 @@ export interface WatchList {
     per_year_now: number; // last full year and this year's pace, averaged
   }[];
 }
+
+// GET /fix-plan/notes: the Fix Plan's text, written by Snowflake Cortex from the
+// page's own figures (scripts/cortex_fix_plan.py). Absent until that has run.
+export interface FixPlanNotes {
+  source: string; // "snowflake-cortex-<model>"
+  generated_at: string;
+  plan: { summary: string } | null;
+  // Keyed by the recommended fix's name, or by intersection id for a review case.
+  letters: Record<string, { subject: string; body: string }>;
+}

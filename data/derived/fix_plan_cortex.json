@@ -1,0 +1,26 @@
+{
+ "source": "snowflake-cortex-claude-sonnet-4-5",
+ "prompt_version": 1,
+ "generated_at": "2026-09-27T12:02:15Z",
+ "plan": {
+  "summary": "Start with appropriate yellow change intervals at 6 intersections, a low-cost fix that could avoid 16 to 28 crashes a year. Across all proven fixes, Gainesville could avoid 24 to 43 crashes a year at its most dangerous intersections."
+ },
+ "letters": {
+  "Appropriate yellow change intervals": {
+   "subject": "Request to evaluate appropriate yellow change intervals at 6 intersections",
+   "body": "Dear City of Gainesville Traffic Engineering staff,\n\nI am writing to request that the city evaluate and schedule appropriate yellow change intervals at the following intersections:\n\nSW 40th Blvd & SW Archer Rd, 42 crashes a year\nSW 20th Ave & SW 62nd Blvd, 39 crashes a year\nNW 13th St & W University Ave, 37 crashes a year\nNW 13th St & NW 39th Ave, 31 crashes a year\nSW 13th St & SW 16th Ave, 29 crashes a year\nSW 23rd Dr & SW Archer Rd, 20 crashes a year\n\nThis treatment would retime the yellow lights so drivers have time to stop. The FHWA reports 8-14% reduction in total crashes, and the estimate for these locations is 16 to 28 crashes avoided a year.\n\nThese figures come from StreetSmart's analysis of dataGNV crash records.\n\nSincerely,\n[Your name]"
+  },
+  "Corridor access management (fewer driveways)": {
+   "subject": "Request to evaluate corridor access management at two intersections",
+   "body": "Dear City of Gainesville Traffic Engineering staff,\n\nI am writing to request that the city evaluate and schedule corridor access management (fewer driveways) at E University Ave & NE Waldo Rd, which has 28 crashes a year, and SW 37th Blvd & SW Archer Rd, which has 40 crashes a year.\n\nThis treatment would close or combine driveways so fewer cars pull in and out mid-block. The FHWA reports a 25-31% reduction in fatal and injury crashes along urban/suburban arterials (reducing driveway density).\n\nThese figures come from StreetSmart's analysis of dataGNV crash records. The crash pattern at these locations points to a need for safer access control along these corridors.\n\nI hope the city will consider this improvement to protect residents and visitors.\n\nSincerely,\n[Your name]"
+  },
+  "Dedicated right-turn lanes": {
+   "subject": "Request to evaluate dedicated right-turn lanes at SW 34th St & SW Archer Rd",
+   "body": "Dear City of Gainesville Traffic Engineering staff,\n\nI am writing to request that the city evaluate and schedule dedicated right-turn lanes at SW 34th St & SW Archer Rd, which experiences 60 crashes a year.\n\nDedicated right-turn lanes give right-turning cars their own lane, out of the through traffic. According to the FHWA, this treatment is associated with a 14-26% reduction in total crashes. StreetSmart's analysis of dataGNV crash records estimates this improvement could avoid 8 to 16 crashes a year at this intersection.\n\nThe crash pattern at this location points to a need for this safety improvement. I hope the city will consider prioritizing this evaluation and implementation.\n\nSincerely,\n[Your name]"
+  },
+  "sw-34th-st-windmeadows-blvd": {
+   "subject": "Request for engineering review at SW 34th St & Windmeadows Blvd",
+   "body": "Dear City of Gainesville Traffic Engineering staff,\n\nI am writing to request an engineering review of the intersection at SW 34th St & Windmeadows Blvd, which experiences 32 crashes a year according to StreetSmart's analysis of dataGNV crash records.\n\nThe crashes there are a mix of kinds, so no single standard fix fits. This crash pattern points to the need for a comprehensive engineering review of the intersection to identify appropriate safety improvements.\n\nI ask that the city conduct an engineering review of this location to better understand the contributing factors and determine what measures could help reduce crashes.\n\nThank you for your attention to this safety concern.\n\nSincerely,\n[Your name]"
+  }
+ }
+}
